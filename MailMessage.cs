@@ -12,40 +12,40 @@ public partial class MailPlugin : Plugin
         public bool Unread;
 
         [DataMember]
-        public readonly DateTime TimestampUtc;
+        public DateTime TimestampUtc;
 
         [DataMember]
-        public readonly MailAddress From;
+        public MailAddress From;
 
         [DataMember]
-        public readonly MailAddress[] To;
+        public MailAddress[] To;
 
         [DataMember]
-        public readonly MailAddress[] Cc;
+        public MailAddress[] Cc;
 
         [DataMember]
-        public readonly MailAddress[] Bcc;
+        public MailAddress[] Bcc;
 
         [DataMember]
-        public readonly MailAddress? ReplyTo;
+        public MailAddress? ReplyTo;
 
         [DataMember]
-        public readonly string MessageId;
+        public string MessageId;
 
         [DataMember]
-        public readonly string? InReplyToId;
+        public string? InReplyToId;
 
         [DataMember]
-        public readonly string Subject;
+        public string Subject;
 
         [DataMember]
-        public readonly MailAttachment[] Attachments;
+        public MailAttachment[] Attachments;
 
         [DataMember]
-        public readonly MailAuthResult AuthResult;
+        public MailAuthResult AuthResult;
 
         [DataMember]
-        public readonly List<string> Log;
+        public List<string> Log;
 
         public MailMessage(bool unread, DateTime timestampUtc, MimeMessage message, MailAttachment[] attachments, MailAuthResult authResult, List<string> log)
         {
