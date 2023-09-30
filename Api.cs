@@ -168,33 +168,12 @@ public partial class MailPlugin : Plugin
                 break;
             case "/delete-message":
                 {
-                    if (!ValidMailbox(req, out var mailbox))
+                    if (InvalidMailbox(req, out var mailbox))
                         break;
-                    if (!req.Query.TryGetValue("folder", out var folderName))
-                    {
-                        req.Status = 400;
+                    if (InvalidMessage(req, out var message, out var messageId, mailbox))
                         break;
-                    }
-                    if (!mailbox.Folders.TryGetValue(folderName, out var folder))
-                    {
-                        req.Status = 404;
+                    if (InvalidFolder(req, out var folder, out var folderName, messageId))
                         break;
-                    }
-                    if (!req.Query.TryGetValue("message", out var messageIdString))
-                    {
-                        req.Status = 400;
-                        break;
-                    }
-                    if ((!ulong.TryParse(messageIdString, out ulong messageId)) || messageId == 0 || !mailbox.Messages.TryGetValue(messageId, out var message))
-                    {
-                        req.Status = 404;
-                        break;
-                    }
-                    if (!folder.Contains(messageId))
-                    {
-                        req.Status = 404;
-                        break;
-                    }
                     mailbox.Lock();
                     string messagePath = $"../Mail/{mailbox.Id}/{messageId}";
                     if (Directory.Exists(messagePath))
@@ -207,7 +186,7 @@ public partial class MailPlugin : Plugin
                 break;
             case "/attachment":
                 {
-                    if (!ValidMailbox(req, out var mailbox))
+                    if (InvalidMailbox(req, out var mailbox))
                         break;
                     if (!req.Query.TryGetValue("message", out var messageIdString))
                     {
