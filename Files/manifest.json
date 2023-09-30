@@ -1,0 +1,40 @@
+{
+  "name": "Mail ([DOMAIN])",
+  "short_name": "Mail",
+  "start_url": "[PATH_HOME]",
+  "display": "minimal-ui",
+  "background_color": "#000000",
+  "theme_color": "#202024",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "[PATH_PREFIX]/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
+    },
+    {
+      "src": "[PATH_PREFIX]/icon.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    },
+    {
+      "src": "[PATH_PREFIX]/icon.ico",
+      "type": "image/x-icon",
+      "sizes": "16x16 24x24 32x32 48x48 64x64 72x72 96x96 128x128 256x256"
+    }
+  ],
+  "launch_handler": {
+    "client_mode": "navigate-new"
+  },
+  "related_applications": [
+    {
+      "platform": "webapp",
+      "url": "[PATH_PREFIX]/manifest.json"
+    }
+  ],
+  "offline_enabled": false,
+  "omnibox": {
+    "keyword": "mail"
+  },
+  "version": "0.1.0"
+}
