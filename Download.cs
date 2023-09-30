@@ -18,21 +18,8 @@ public partial class MailPlugin : Plugin
         {
             case "/attachment":
                 {
-                    if (!req.Query.TryGetValue("mailbox", out string? mailboxId))
-                    {
-                        req.Status = 400;
+                    if (!ValidMailbox(req, out var mailbox))
                         break;
-                    }
-                    if (!Mailboxes.TryGetValue(mailboxId, out Mailbox? mailbox))
-                    {
-                        req.Status = 404;
-                        break;
-                    }
-                    if ((!mailbox.AllowedUserIds.TryGetValue(req.UserTable.Name, out var allowedUserIds)) || !allowedUserIds.Contains(req.User.Id))
-                    {
-                        req.Status = 403;
-                        break;
-                    }
                     if (!req.Query.TryGetValue("message", out var messageIdString))
                     {
                         req.Status = 400;
@@ -53,7 +40,7 @@ public partial class MailPlugin : Plugin
                         req.Status = 404;
                         break;
                     }
-                    string filePath = $"../Mail/{mailboxId}/{messageId}/{attachmentId}";
+                    string filePath = $"../Mail/{mailbox.Id}/{messageId}/{attachmentId}";
                     if (!File.Exists(filePath))
                     {
                         req.Status = 404;
