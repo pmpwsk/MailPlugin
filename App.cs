@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc.Filters;
 using Org.BouncyCastle.Ocsp;
+using Org.BouncyCastle.Tls.Crypto.Impl.BC;
 using System.Reflection.Metadata.Ecma335;
 using System.Security.Cryptography;
 using System.Threading;
@@ -250,21 +251,8 @@ public partial class MailPlugin : Plugin
                 } break;
             case "/send":
                 {
-                    if (!req.Query.TryGetValue("mailbox", out string? mailboxId))
-                    {
-                        req.Status = 400;
+                    if (InvalidMailbox(req, out var mailbox, e))
                         break;
-                    }
-                    if (!Mailboxes.TryGetValue(mailboxId, out Mailbox? mailbox))
-                    {
-                        e.Add(new LargeContainerElement("Error", "This mailbox doesn't exist!", "red"));
-                        break;
-                    }
-                    if ((!mailbox.AllowedUserIds.TryGetValue(req.UserTable.Name, out var allowedUserIds)) || !allowedUserIds.Contains(req.User.Id))
-                    {
-                        e.Add(new LargeContainerElement("Error", "You don't have access to this mailbox!", "red"));
-                        break;
-                    }
                     page.Title = "Send an email";
                     page.HideFooter = true;
                     page.Scripts.Add(new Script(pathPrefix + "/query.js"));
