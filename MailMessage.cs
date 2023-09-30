@@ -18,13 +18,13 @@ public partial class MailPlugin : Plugin
         public MailAddress From;
 
         [DataMember]
-        public MailAddress[] To;
+        public List<MailAddress> To;
 
         [DataMember]
-        public MailAddress[] Cc;
+        public List<MailAddress> Cc;
 
         [DataMember]
-        public MailAddress[] Bcc;
+        public List<MailAddress> Bcc;
 
         [DataMember]
         public MailAddress? ReplyTo;
@@ -39,7 +39,7 @@ public partial class MailPlugin : Plugin
         public string Subject;
 
         [DataMember]
-        public MailAttachment[] Attachments;
+        public List<MailAttachment> Attachments;
 
         [DataMember]
         public MailAuthResult AuthResult;
@@ -47,14 +47,14 @@ public partial class MailPlugin : Plugin
         [DataMember]
         public List<string> Log;
 
-        public MailMessage(bool unread, DateTime timestampUtc, MimeMessage message, MailAttachment[] attachments, MailAuthResult authResult, List<string> log)
+        public MailMessage(bool unread, DateTime timestampUtc, MimeMessage message, List<MailAttachment> attachments, MailAuthResult authResult, List<string> log)
         {
             Unread = unread;
             TimestampUtc = timestampUtc;
             From = new(message.From.Mailboxes.FirstOrDefault() ?? throw new Exception("No sender found!"));
-            To = message.To.Mailboxes.Select(x => new MailAddress(x)).ToArray();
-            Cc = message.Cc.Mailboxes.Select(x => new MailAddress(x)).ToArray();
-            Bcc = message.Bcc.Mailboxes.Select(x => new MailAddress(x)).ToArray();
+            To = message.To.Mailboxes.Select(x => new MailAddress(x)).ToList();
+            Cc = message.Cc.Mailboxes.Select(x => new MailAddress(x)).ToList();
+            Bcc = message.Bcc.Mailboxes.Select(x => new MailAddress(x)).ToList();
             ReplyTo = message.ReplyTo.Mailboxes.Any() ? new(message.ReplyTo.Mailboxes.First()) : null;
             MessageId = message.MessageId;
             InReplyToId = message.InReplyTo;

@@ -250,7 +250,7 @@ public partial class MailPlugin : Plugin
                         req.Status = 400;
                         break;
                     }
-                    if (attachmentId < 0 || attachmentId >= message.Attachments.Length)
+                    if (attachmentId < 0 || attachmentId >= message.Attachments.Count)
                     {
                         req.Status = 404;
                         break;

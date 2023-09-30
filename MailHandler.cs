@@ -32,7 +32,7 @@ public partial class MailPlugin : Plugin
         {
             List<string> log = new();
             MailAuthResult authResult = new(oldAuthResult, message, log);
-            MailAttachment[] attachments = message.Attachments.Select(x => new MailAttachment(x.ContentDisposition.FileName, x.ContentType.MimeType)).ToArray();
+            List<MailAttachment> attachments = message.Attachments.Select(x => new MailAttachment(x.ContentDisposition.FileName, x.ContentType.MimeType)).ToList();
             MailMessage mail = new(true, DateTime.UtcNow, message, attachments, authResult, log);
             foreach (string toAddress in mailboxes.Select(x => x.Address))
             {
