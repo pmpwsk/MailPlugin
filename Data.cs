@@ -23,6 +23,8 @@ public partial class MailPlugin : Plugin
 
     private bool InvalidMailbox(IRequest req, [MaybeNullWhen(true)] out Mailbox mailbox)
     {
+        if (req.GetType() == typeof(AppRequest))
+            throw new Exception("An invalidation method for non-AppRequest handling was used for an AppRequest.");
         if (req.User == null)
         {
             req.Status = 403;
