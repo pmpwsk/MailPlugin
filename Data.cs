@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Localization;
 using System.Diagnostics.CodeAnalysis;
+using uwap.WebFramework.Elements;
 
 namespace uwap.WebFramework.Plugins;
 
@@ -148,6 +149,35 @@ public partial class MailPlugin : Plugin
             mailbox = null;
             message = null;
             messageId = default;
+            return true;
+        }
+        return false;
+    }
+
+    private bool InvalidMailbox(AppRequest req, [MaybeNullWhen(true)] out Mailbox mailbox, List<IPageElement> e)
+    {
+        if (req.User == null)
+        {
+            req.Status = 403;
+            mailbox = null;
+            return true;
+        }
+        if (!req.Query.TryGetValue("mailbox", out string? mailboxId))
+        {
+            req.Status = 400;
+            mailbox = null;
+            return true;
+        }
+        if (!Mailboxes.TryGetValue(mailboxId, out mailbox))
+        {
+            e.Add(new LargeContainerElement("Error", "This mailbox doesn't exist!", "red"));
+            mailbox = null;
+            return true;
+        }
+        if ((!mailbox.AllowedUserIds.TryGetValue(req.UserTable.Name, out var allowedUserIds)) || !allowedUserIds.Contains(req.User.Id))
+        {
+            e.Add(new LargeContainerElement("Error", "You don't have access to this mailbox!", "red"));
+            mailbox = null;
             return true;
         }
         return false;
