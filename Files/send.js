@@ -24,7 +24,6 @@ function Resize() {
     let newHeightFloat = window.visualViewport.height - (parseFloat(e2Comp['marginTop']) * 3) - parseFloat(e1Comp['height']) - parseFloat(e2Comp['height']) - parseFloat(e4Comp['height']) - parseFloat(e3Comp['marginTop']) - parseFloat(fullComp['paddingTop']) - parseFloat(fullComp['paddingBottom']);
     if (erComp['display'] !== "none")
         newHeightFloat = newHeightFloat - parseFloat(e2Comp['marginTop']) - parseFloat(erComp['height']);
-    let newHeight = Math.floor(newHeightFloat);
     e3.style.flex = '1';
     e3.style.height = newHeightFloat + 'px';
     Refocus();
