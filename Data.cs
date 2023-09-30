@@ -1,4 +1,5 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using Microsoft.AspNetCore.Localization;
+using System.Diagnostics.CodeAnalysis;
 
 namespace uwap.WebFramework.Plugins;
 
@@ -88,6 +89,65 @@ public partial class MailPlugin : Plugin
             req.Status = 404;
             folder = null;
             folderName = null;
+            return true;
+        }
+        return false;
+    }
+
+    private bool InvalidMailboxOrMessage(IRequest req, [MaybeNullWhen(true)] out Mailbox mailbox, [MaybeNullWhen(true)] out MailMessage message, [MaybeNullWhen(true)] out ulong messageId)
+    {
+        if (InvalidMailbox(req, out mailbox))
+        {
+            message = null;
+            messageId = default;
+            return true;
+        }
+        if (InvalidMessage(req, out message, out messageId, mailbox))
+        {
+            mailbox = null;
+            return true;
+        }
+        return false;
+    }
+
+    private bool InvalidMailboxOrFolder(IRequest req, [MaybeNullWhen(true)] out Mailbox mailbox, [MaybeNullWhen(true)] out SortedSet<ulong> folder, [MaybeNullWhen(true)] out string folderName)
+    {
+        if (InvalidMailbox(req, out mailbox))
+        {
+            folder = null;
+            folderName = null;
+            return true;
+        }
+        if (InvalidFolder(req, out folder, out folderName, mailbox, null))
+        {
+            mailbox = null;
+            return true;
+        }
+        return false;
+    }
+
+    private bool InvalidMailboxOrMessageOrFolder(IRequest req, [MaybeNullWhen(true)] out Mailbox mailbox, [MaybeNullWhen(true)] out MailMessage message, [MaybeNullWhen(true)] out ulong messageId, [MaybeNullWhen(true)] out SortedSet<ulong> folder, [MaybeNullWhen(true)] out string folderName)
+    {
+        if (InvalidMailbox(req, out mailbox))
+        {
+            message = null;
+            messageId = default;
+            folder = null;
+            folderName = null;
+            return true;
+        }
+        if (InvalidMessage(req, out message, out messageId, mailbox))
+        {
+            mailbox = null;
+            folder = null;
+            folderName = null;
+            return true;
+        }
+        if (InvalidFolder(req, out folder, out folderName, mailbox, messageId))
+        {
+            mailbox = null;
+            message = null;
+            messageId = default;
             return true;
         }
         return false;
