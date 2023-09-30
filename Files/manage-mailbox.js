@@ -54,11 +54,11 @@ async function Delete() {
     }
 }
 
-function GetQuery("mailbox") {
+function GetQuery(q) {
     try {
         let query = new URLSearchParams(window.location.search);
-        if (query.has("mailbox")) {
-            return query.get("mailbox");
+        if (query.has(q)) {
+            return query.get(q);
         } else {
             return "";
         }
