@@ -168,11 +168,7 @@ public partial class MailPlugin : Plugin
                 break;
             case "/delete-message":
                 {
-                    if (InvalidMailbox(req, out var mailbox))
-                        break;
-                    if (InvalidMessage(req, out var message, out var messageId, mailbox))
-                        break;
-                    if (InvalidFolder(req, out var folder, out var folderName, messageId))
+                    if (InvalidMailboxOrMessageOrFolder(req, out var mailbox, out _, out var messageId, out var folder, out _))
                         break;
                     mailbox.Lock();
                     string messagePath = $"../Mail/{mailbox.Id}/{messageId}";
@@ -186,18 +182,8 @@ public partial class MailPlugin : Plugin
                 break;
             case "/attachment":
                 {
-                    if (InvalidMailbox(req, out var mailbox))
+                    if (InvalidMailboxOrMessage(req, out var mailbox, out var message, out var messageId))
                         break;
-                    if (!req.Query.TryGetValue("message", out var messageIdString))
-                    {
-                        req.Status = 400;
-                        break;
-                    }
-                    if ((!ulong.TryParse(messageIdString, out ulong messageId)) || !mailbox.Messages.TryGetValue(messageId, out var message))
-                    {
-                        req.Status = 404;
-                        break;
-                    }
                     if ((!req.Query.TryGetValue("attachment", out string? attachmentIdString)) || !int.TryParse(attachmentIdString, out var attachmentId))
                     {
                         req.Status = 400;
