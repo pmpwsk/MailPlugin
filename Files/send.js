@@ -46,7 +46,6 @@ async function GoToAttachments() {
 }
 
 async function Save() {
-    back.innerText = "Back";
     save.innerText = "Saving...";
     save.className = "green";
     try {
