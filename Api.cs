@@ -1,8 +1,11 @@
-﻿using System.Diagnostics.Eventing.Reader;
+﻿using Microsoft.AspNetCore.Server.HttpSys;
+using System.Diagnostics.Eventing.Reader;
 using System.Web;
 using uwap.Database;
 using uwap.WebFramework.Accounts;
 using uwap.WebFramework.Elements;
+using uwap.WebFramework.Mail;
+using static QRCoder.PayloadGenerator;
 
 namespace uwap.WebFramework.Plugins;
 
@@ -215,6 +218,59 @@ public partial class MailPlugin : Plugin
                     mailbox.Messages.Remove(0);
                     if (Directory.Exists($"../Mail/{mailbox.Id}/0"))
                         Directory.Delete($"../Mail/{mailbox.Id}/0", true);
+                    mailbox.UnlockSave();
+                }
+                break;
+            case "/send-draft":
+                {
+                    if (InvalidMailbox(req, out var mailbox))
+                        break;
+                    if (!mailbox.Messages.TryGetValue(0, out var message))
+                    {
+                        await req.Write("no-draft");
+                        break;
+                    }
+                    if (message.Subject == "")
+                    {
+                        await req.Write("invalid-subject");
+                        break;
+                    }
+                    if (!message.To.Any())
+                    {
+                        await req.Write("invalid-to");
+                        break;
+                    }
+                    string text = File.Exists($"../Mail/{mailbox.Id}/0/text") ? File.ReadAllText($"../Mail/{mailbox.Id}/0/text") : "";
+                    if (text == "")
+                    {
+                        await req.Write("invalid-text");
+                        break;
+                    }
+                    mailbox.Lock();
+                    MailGen msg = new(new(message.From.Name, message.From.Address), message.To.Select(x => new MimeKit.MailboxAddress(x.Name, x.Address)), message.Subject, text, false);
+                    var result = MailManager.Out.Send(msg, out var messageIds);
+                    message.MessageId = string.Join('\n', messageIds);
+                    var log = message.Log;
+                    if (result.FromSelf != null)
+                    {
+                        log.Add("FromSelf result: " + result.FromSelf.ResultType.ToString());
+                        foreach (string l in result.FromSelf.ConnectionLog)
+                            log.Add(l);
+                    }
+                    if (result.FromBackup != null)
+                    {
+                        log.Add("FromBackup result: " + result.FromBackup.ResultType.ToString());
+                        foreach (string l in result.FromBackup.ConnectionLog)
+                            log.Add(l);
+                    }
+                    mailbox.Messages.Remove(0);
+                    ulong messageId = (ulong)message.TimestampUtc.Ticks;
+                    while (mailbox.Messages.ContainsKey(messageId))
+                        messageId++;
+                    mailbox.Messages[messageId] = message;
+                    mailbox.Folders["Sent"].Add(messageId);
+                    Directory.Move($"../Mail/{mailbox.Id}/0", $"../Mail/{mailbox.Id}/{messageId}");
+                    await req.Write("message=" + messageId);
                     mailbox.UnlockSave();
                 }
                 break;
