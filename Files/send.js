@@ -8,7 +8,6 @@ let e4 = document.querySelector('#e4');
 let sidebar = document.querySelector('.sidebar');
 let full = document.querySelector('.full');
 let save = document.querySelector('#save');
-let back = document.querySelector('#back');
 window.onresize = Resize;
 ta.onclick = Refocus;
 Resize();
