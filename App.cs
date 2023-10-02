@@ -277,14 +277,28 @@ public partial class MailPlugin : Plugin
                     }, id: "e1") { Button = new ButtonJS("Send", "Send()", "green") });
                     e.Add(new ContainerElement(null, "Draft:", id: "e2") { Buttons = new()
                     {
-                        new ButtonJS("Save", "Save()", "green", id: "save"),
+                        new ButtonJS("Saved!", "Save()", id: "save"),
                         new ButtonJS("Discard", "Discard()", "red", id: "discardButton")
                     }});
+                    string? to, subject, text;
+                    if (mailbox.Messages.TryGetValue(0, out var message))
+                    {
+                        to = string.Join(';', message.To.Select(x => x.Address));
+                        if (to == "") to = null;
+                        subject = message.Subject;
+                        if (subject == "") subject = null;
+                        text = File.Exists($"../Mail/{mailbox.Id}/0/text") ? File.ReadAllText($"../Mail/{mailbox.Id}/0/text") : null;
+                        if (text == "") text = null;
+                    }
+                    else
+                    {
+                        to = null; subject = null; text = null;
+                    }
                     e.Add(new LargeContainerElement(null, new List<IContent>
                     {
-                        new TextBox("Recipient(s)...", null, "to", TextBoxRole.Email, autofocus: true, onInput: "MessageChanged()"),
-                        new TextBox("Subject...", null, "subject", onInput: "MessageChanged()"),
-                        new TextArea("Message...", null, "text", onInput: "MessageChanged(); Resize()")
+                        new TextBox("Recipient(s)...", to, "to", TextBoxRole.Email, autofocus: true, onInput: "MessageChanged()"),
+                        new TextBox("Subject...", subject, "subject", onInput: "MessageChanged()"),
+                        new TextArea("Message...", text, "text", onInput: "MessageChanged(); Resize()")
                     }, id: "e3"));
                     e.Add(new ButtonElementJS(null, "Attachments (9001)", "GoToAttachments()"/*$"{pathPrefix}/send/attachments?mailbox={mailboxId}"*/, id: "e4"));
                     /*e.Add(new ContainerElement("Attachments:", new FileSelector("upload")) { Button = new ButtonJS("Upload", "Upload()", "green")});
