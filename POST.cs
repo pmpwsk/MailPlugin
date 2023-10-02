@@ -23,7 +23,7 @@ public partial class MailPlugin : Plugin
                         req.Status = 400;
                         break;
                     }
-                    var to = toString.Split(',', ';', ' ');
+                    var to = toString.Split(',', ';', ' ').Where(x => x != "");
                     if (to.Any(x => !AccountManager.CheckMailAddressFormat(x)))
                     {
                         await req.Write("invalid-to");
