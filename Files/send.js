@@ -39,8 +39,9 @@ function Refocus() {
 }
 
 async function GoToAttachments() {
-    await Save();
-    window.location.assign(window.location.pathname + "/attachments?mailbox=" + GetQuery("mailbox"));
+    if (await Save()) {
+        window.location.assign(window.location.pathname + "/attachments?mailbox=" + GetQuery("mailbox"));
+    }
 }
 
 async function Save() {
