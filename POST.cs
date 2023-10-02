@@ -23,11 +23,6 @@ public partial class MailPlugin : Plugin
                         req.Status = 400;
                         break;
                     }
-                    if (subject == "")
-                    {
-                        await req.Write("invalid-subject");
-                        break;
-                    }
                     var to = toString.Split(',', ';', ' ');
                     if (to.Any(x => !AccountManager.CheckMailAddressFormat(x)))
                     {
