@@ -43,6 +43,7 @@ public partial class MailPlugin : Plugin
                     {
                         mailbox.Messages[0] = new(new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address), to.Select(x => new MailAddress(x, x)).ToList(), subject, null);
                     }
+                    await req.Write("ok");
                     mailbox.UnlockSave();
                 }
                 break;
