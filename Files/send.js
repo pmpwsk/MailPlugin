@@ -81,7 +81,8 @@ async function Discard() {
 }
 
 function MessageChanged() {
-    ShowError("Not implemented.");
+    save.innerText = "Save";
+    save.className = "green";
 }
 
 async function Send() {
