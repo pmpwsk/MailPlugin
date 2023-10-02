@@ -59,7 +59,7 @@ async function Save() {
                     return true;
                     break;
                 case "invalid-to":
-                    ShowError("Invalid recipient(s).")
+                    ShowError("Invalid recipient(s).");
                     break;
                 default:
                     ShowError("Connection failed.");
@@ -95,7 +95,36 @@ function MessageChanged() {
 }
 
 async function Send() {
-    ShowError("Not implemented.");
+    if (await Save()) {
+        try {
+            let response = await fetch("/api[PATH_PREFIX]/send-draft?mailbox=" + GetQuery("mailbox"));
+            if (response.status === 200) {
+                let text = await response.text();
+                if (text.startsWith("message=")) {
+                    window.location.assign("[PATH_HOME]?mailbox=" + GetQuery("mailbox") + "&folder=Sent&" + text);
+                } else {
+                    switch (text) {
+                        case "invalid-to":
+                            ShowError("Enter at least one recipient.");
+                            break;
+                        case "invalid-subject":
+                            ShowError("Enter a subject.");
+                            break;
+                        case "invalid-text":
+                            ShowError("Enter a message.");
+                            break;
+                        default:
+                            ShowError("Connection failed.");
+                            break;
+                    }
+                }
+            } else {
+                ShowError("Connection failed.");
+            }
+        } catch {
+            ShowError("Connection failed.");
+        }
+    }
 }
 
 function ShowError(message) {
