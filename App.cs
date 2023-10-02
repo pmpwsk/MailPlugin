@@ -274,7 +274,7 @@ public partial class MailPlugin : Plugin
                     e.Add(new LargeContainerElement("Send an email", new List<IContent>
                     {
                         new Paragraph($"From: {mailbox.Address}{(mailbox.Name == null ? "" : $" ({mailbox.Name})")}"),
-                    }, id: "e1") { Button = new ButtonJS("Send", "Send()", "green") });
+                    }, id: "e1") { Button = new ButtonJS("Send", "Send()", "green", id: "send") });
                     e.Add(new ContainerElement(null, "Draft:", id: "e2") { Buttons = new()
                     {
                         new ButtonJS("Saved!", "Save()", id: "save"),
