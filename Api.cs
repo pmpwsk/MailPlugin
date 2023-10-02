@@ -253,13 +253,13 @@ public partial class MailPlugin : Plugin
                     var log = message.Log;
                     if (result.FromSelf != null)
                     {
-                        log.Add("FromSelf result: " + result.FromSelf.ResultType.ToString());
+                        log.Add("From the server directly: " + result.FromSelf.ResultType.ToString());
                         foreach (string l in result.FromSelf.ConnectionLog)
                             log.Add(l);
                     }
                     if (result.FromBackup != null)
                     {
-                        log.Add("FromBackup result: " + result.FromBackup.ResultType.ToString());
+                        log.Add("From the backup sender: " + result.FromBackup.ResultType.ToString());
                         foreach (string l in result.FromBackup.ConnectionLog)
                             log.Add(l);
                     }
