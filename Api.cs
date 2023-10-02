@@ -205,6 +205,19 @@ public partial class MailPlugin : Plugin
                     await req.SendFile(filePath);
                 }
                 break;
+            case "/delete-draft":
+                {
+                    if (InvalidMailbox(req, out var mailbox))
+                        break;
+                    if (!mailbox.Messages.ContainsKey(0))
+                        break;
+                    mailbox.Lock();
+                    mailbox.Messages.Remove(0);
+                    if (Directory.Exists($"../Mail/{mailbox.Id}/0"))
+                        Directory.Delete($"../Mail/{mailbox.Id}/0", true);
+                    mailbox.UnlockSave();
+                }
+                break;
             default:
                 req.Status = 404;
                 break;
