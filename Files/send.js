@@ -77,7 +77,16 @@ async function Save() {
 }
 
 async function Discard() {
-    ShowError("Not implemented.");
+    try {
+        let response = await fetch("/api[PATH_PREFIX]/delete-draft?mailbox=" + GetQuery("mailbox"));
+        if (response.status === 200) {
+            window.location.assign("[PATH_HOME]?mailbox=" + GetQuery("mailbox"));
+        } else {
+            ShowError("Connection failed.");
+        }
+    } catch {
+        ShowError("Connection failed.");
+    }
 }
 
 function MessageChanged() {
