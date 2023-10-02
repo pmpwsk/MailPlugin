@@ -1,5 +1,7 @@
 ﻿using MimeKit;
+using System.Net.Mail;
 using System.Runtime.Serialization;
+using System.Threading;
 
 namespace uwap.WebFramework.Plugins;
 
@@ -42,7 +44,7 @@ public partial class MailPlugin : Plugin
         public List<MailAttachment> Attachments;
 
         [DataMember]
-        public MailAuthResult AuthResult;
+        public MailAuthResult? AuthResult;
 
         [DataMember]
         public List<string> Log;
@@ -62,6 +64,23 @@ public partial class MailPlugin : Plugin
             Attachments = attachments;
             AuthResult = authResult;
             Log = log;
+        }
+
+        public MailMessage(MailAddress from, List<MailAddress> to, string subject, string? inReplyToId)
+        {
+            Unread = false;
+            TimestampUtc = DateTime.UtcNow;
+            From = from;
+            To = to;
+            Cc = new();
+            Bcc = new();
+            ReplyTo = null;
+            MessageId = "none";
+            InReplyToId = inReplyToId;
+            Subject = subject;
+            Attachments = new();
+            AuthResult = null;
+            Log = new();
         }
     }
 }
