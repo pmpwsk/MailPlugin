@@ -1,5 +1,7 @@
 let ch = 0;
 let ta = document.querySelector('#text');
+let subject = document.querySelector('#subject');
+let to = document.querySelector('#to');
 let error = document.querySelector("#error");
 let e1 = document.querySelector('#e1');
 let e2 = document.querySelector('#e2');
@@ -44,7 +46,35 @@ async function GoToAttachments() {
 }
 
 async function Save() {
-    ShowError("Not implemented.");
+    back.innerText = "Back";
+    save.innerText = "Saving...";
+    save.className = "green";
+    try {
+        let response = await fetch("[PATH_PREFIX]/save-draft?mailbox=" + GetQuery("mailbox") + "&to=" + to.value + "&subject=" + subject.value, { method: "POST", body: ta.value });
+        if (response.status === 200) {
+            let text = await response.text();
+            switch (text) {
+                case "ok":
+                    save.innerText = "Saved!";
+                    save.className = "";
+                    return true;
+                    break;
+                case "invalid-to":
+                    ShowError("Invalid recipient(s).")
+                    break;
+                default:
+                    ShowError("Connection failed.");
+                    break;
+            }
+        } else {
+            ShowError("Connection failed.");
+        }
+    } catch {
+        ShowError("Connection failed.");
+    }
+    save.innerText = "Save";
+    save.className = "green";
+    return false;
 }
 
 async function Discard() {
