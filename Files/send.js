@@ -1,4 +1,5 @@
 let ch = 0;
+let send = document.querySelector('#send');
 let ta = document.querySelector('#text');
 let subject = document.querySelector('#subject');
 let to = document.querySelector('#to');
@@ -95,6 +96,7 @@ function MessageChanged() {
 }
 
 async function Send() {
+    send.innerText = "Sending...";
     if (await Save()) {
         try {
             let response = await fetch("/api[PATH_PREFIX]/send-draft?mailbox=" + GetQuery("mailbox"));
@@ -102,6 +104,7 @@ async function Send() {
                 let text = await response.text();
                 if (text.startsWith("message=")) {
                     window.location.assign("[PATH_HOME]?mailbox=" + GetQuery("mailbox") + "&folder=Sent&" + text);
+                    return;
                 } else {
                     switch (text) {
                         case "invalid-to":
@@ -125,6 +128,7 @@ async function Send() {
             ShowError("Connection failed.");
         }
     }
+    send.innerText = "Send";
 }
 
 function ShowError(message) {
