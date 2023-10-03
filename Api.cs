@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Server.HttpSys;
+using MimeKit;
 using System.Diagnostics.Eventing.Reader;
 using System.Web;
 using uwap.Database;
@@ -248,6 +249,20 @@ public partial class MailPlugin : Plugin
                     }
                     mailbox.Lock();
                     MailGen msg = new(new(message.From.Name, message.From.Address), message.To.Select(x => new MimeKit.MailboxAddress(x.Name, x.Address)), message.Subject, text, false);
+                    msg.CustomChange = m =>
+                    {
+                        var builder = new BodyBuilder()
+                        {
+                            TextBody = text
+                        };
+                        int counter = 0;
+                        foreach (var attachment in message.Attachments)
+                        {
+                            builder.Attachments.Add(attachment.Name, File.ReadAllBytes($"../Mail/{mailbox.Id}/0/{counter}"), ContentType.Parse(attachment.MimeType));
+                            counter++;
+                        }
+                        m.Body = builder.ToMessageBody();
+                    };
                     var result = MailManager.Out.Send(msg, out var messageIds);
                     message.MessageId = string.Join('\n', messageIds);
                     var log = message.Log;
