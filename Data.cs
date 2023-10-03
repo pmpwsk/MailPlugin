@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Localization;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Localization;
 using System.Diagnostics.CodeAnalysis;
 using uwap.WebFramework.Elements;
 
@@ -20,6 +21,22 @@ public partial class MailPlugin : Plugin
 
     private static string DateTimeString(DateTime dt)
         => $"{dt.DayOfWeek}, {dt.Year}/{dt.Month}/{dt.Day}, {dt.ToShortTimeString()}";
+
+    private static DateTime AdjustDateTime(IRequest req, DateTime dateTime)
+    {
+        try
+        {
+            string timeOffset = req.Cookies["TimeOffset"];
+            if (timeOffset == "")
+                return dateTime;
+            else return dateTime.AddMinutes(0 - int.Parse(timeOffset));
+        }
+        catch
+        {
+            req.Cookies.Delete("TimeOffset");
+            return dateTime;
+        }
+    }
 
     private bool InvalidMailbox(IRequest req, [MaybeNullWhen(true)] out Mailbox mailbox)
     {
