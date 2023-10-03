@@ -274,6 +274,47 @@ public partial class MailPlugin : Plugin
                     mailbox.UnlockSave();
                 }
                 break;
+            case "/delete-attachment":
+                {
+                    if (InvalidMailbox(req, out var mailbox))
+                        break;
+                    if (!req.Query.TryGetValue("attachment", out var attachmentId))
+                    {
+                        req.Status = 400;
+                        break;
+                    }
+                    if (!int.TryParse(attachmentId, out var a))
+                    {
+                        req.Status = 400;
+                        break;
+                    }
+                    if (a < 0)
+                    {
+                        req.Status = 400;
+                        break;
+                    }
+                    if (!mailbox.Messages.TryGetValue(0, out var message))
+                    {
+                        req.Status = 404;
+                        break;
+                    }
+                    if (a >= message.Attachments.Count)
+                    {
+                        req.Status = 404;
+                        break;
+                    }
+                    mailbox.Lock();
+                    message.Attachments.RemoveAt(a);
+                    File.Delete($"../Mail/{mailbox.Id}/0/{a}");
+                    a++;
+                    while (File.Exists($"../Mail/{mailbox.Id}/0/{a}"))
+                    {
+                        File.Move($"../Mail/{mailbox.Id}/0/{a}", $"../Mail/{mailbox.Id}/0/{a - 1}");
+                        a++;
+                    }
+                    mailbox.UnlockSave();
+                }
+                break;
             default:
                 req.Status = 404;
                 break;
