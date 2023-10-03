@@ -324,7 +324,7 @@ public partial class MailPlugin : Plugin
                     {
                         new Paragraph($"From: {mailbox.Address}{(mailbox.Name == null ? "" : $" ({mailbox.Name})")}"),
                     }, id: "e1")
-                    { Button = new Button("Back", $"{pathPrefix}/send?mailbox={mailbox.Id}", "red") });
+                    { Button = new Button("Back", $"{pathPrefix}/send?mailbox={mailbox.Id}") });
                     e.Add(new ContainerElement("Add attachment:", new FileSelector("update-file")) { Button = new ButtonJS("Add", "Upload()", "green", id: "uploadButton") });
                     page.AddError();
                     int attachmentCount = Directory.Exists($"../Mail/{mailbox.Id}/0") ? Directory.GetFiles($"../Mail/{mailbox.Id}/0").Select(x => x.After('/').After('\\')).Count(x => x != "text") : 0;
@@ -332,8 +332,10 @@ public partial class MailPlugin : Plugin
                     {
                         int counter = 0;
                         foreach (var attachment in message.Attachments)
+                        {
                             e.Add(new ContainerElement(null, attachment.Name ?? "No file name", "overflow") { Button = new ButtonJS("Remove", $"Delete('{counter}')", "red") });
-                        counter++;
+                            counter++;
+                        }
                     }
                 }
                 break;
