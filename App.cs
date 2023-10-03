@@ -190,7 +190,7 @@ public partial class MailPlugin : Plugin
                         HighlightSidebar(page, req, "view");
                         List<IContent> contents = new()
                         {
-                            new Paragraph(DateTimeString(message.TimestampUtc)),
+                            new Paragraph(DateTimeString(AdjustDateTime(req, message.TimestampUtc))),
                             new Paragraph("From: " + message.From.FullString)
                         };
                         foreach (var to in message.To)
