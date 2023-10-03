@@ -42,7 +42,7 @@ function Refocus() {
 
 async function GoToAttachments() {
     if (await Save()) {
-        window.location.assign(window.location.pathname + "/attachments?mailbox=" + GetQuery("mailbox"));
+        window.location.assign("[PATH_PREFIX]/send/attachments?mailbox=" + GetQuery("mailbox"));
     }
 }
 
