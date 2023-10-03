@@ -32,6 +32,7 @@ public partial class MailPlugin : Plugin
         {
             case "":
                 {
+                    page.Scripts.Add(new CustomScript($"document.cookie = \"TimeOffset=\" + new Date().getTimezoneOffset() + \"; domain={req.Domain}; path=/\";"));
                     if (!req.Query.TryGetValue("mailbox", out string? mailboxId))
                     {/////
                         //list mailboxes that the user has access to or an error if none were found, redirect to mailbox if only one is present and user isn't admin
