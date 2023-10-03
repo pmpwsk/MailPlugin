@@ -293,6 +293,7 @@ public partial class MailPlugin : Plugin
                     }
                     else
                     {
+                        message = null;
                         to = null; subject = null; text = null;
                     }
                     e.Add(new LargeContainerElement(null, new List<IContent>
@@ -301,14 +302,40 @@ public partial class MailPlugin : Plugin
                         new TextBox("Subject...", subject, "subject", onInput: "MessageChanged()"),
                         new TextArea("Message...", text, "text", onInput: "MessageChanged(); Resize()")
                     }, id: "e3"));
-                    e.Add(new ButtonElementJS(null, "Attachments (9001)", "GoToAttachments()"/*$"{pathPrefix}/send/attachments?mailbox={mailboxId}"*/, id: "e4"));
-                    /*e.Add(new ContainerElement("Attachments:", new FileSelector("upload")) { Button = new ButtonJS("Upload", "Upload()", "green")});
-                    foreach (string attachmentName in new[] { "Example attachment 1.png", "Example attachment 2.png", "Example attachment 3.png" })
-                        e.Add(new ContainerElement(null, attachmentName, "overflow") { Button = new ButtonJS("Delete", "Delete('ID GOES HERE!')", "red") });*/
+                    int attachmentCount = message == null ? 0 : message.Attachments.Count;
+                    e.Add(new ButtonElementJS(null, $"Attachments ({attachmentCount})", "GoToAttachments()", id: "e4"));
                 }
                 break;
             case "/send/attachments":
-                req.Status = 501;//mailbox id query required, check access!
+                {
+                    if (InvalidMailbox(req, out var mailbox, e))
+                        break;
+                    page.Title = "Send an email";
+                    page.Scripts.Add(new Script(pathPrefix + "/query.js"));
+                    page.Scripts.Add(new Script(pathPrefix + "/send-attachments.js"));
+                    page.Sidebar.Add(new ButtonElement("Mailboxes:", null, pluginHome));
+                    foreach (var m in (Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : new HashSet<Mailbox>())
+                        .OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@')))
+                    {
+                        page.Sidebar.Add(new ButtonElement(null, m.Address, $"{pathPrefix}/send/attachments?mailbox={m.Id}"));
+                    }
+                    HighlightSidebar(page, req);
+                    e.Add(new LargeContainerElement("Send an email", new List<IContent>
+                    {
+                        new Paragraph($"From: {mailbox.Address}{(mailbox.Name == null ? "" : $" ({mailbox.Name})")}"),
+                    }, id: "e1")
+                    { Button = new Button("Back", $"{pathPrefix}/send?mailbox={mailbox.Id}", "red") });
+                    e.Add(new ContainerElement("Add attachment:", new FileSelector("update-file")) { Button = new ButtonJS("Add", "Upload()", "green", id: "uploadButton") });
+                    page.AddError();
+                    int attachmentCount = Directory.Exists($"../Mail/{mailbox.Id}/0") ? Directory.GetFiles($"../Mail/{mailbox.Id}/0").Select(x => x.After('/').After('\\')).Count(x => x != "text") : 0;
+                    if (mailbox.Messages.TryGetValue(0, out var message))
+                    {
+                        int counter = 0;
+                        foreach (var attachment in message.Attachments)
+                            e.Add(new ContainerElement(null, attachment.Name ?? "No file name", "overflow") { Button = new ButtonJS("Remove", $"Delete('{counter}')", "red") });
+                        counter++;
+                    }
+                }
                 break;
             case "/settings":
                 req.Status = 501;//mailbox id query required, check access!
