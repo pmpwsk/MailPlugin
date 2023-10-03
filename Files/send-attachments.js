@@ -5,6 +5,10 @@ async function Upload() {
         return;
     }
     let file = files[0];
+    if (file.size > 10485760) {
+        ShowError("This file is too large! (limit: 10MB)");
+        return;
+    }
     let form = new FormData();
     form.append("file", file);
     let request = new XMLHttpRequest();
@@ -19,11 +23,27 @@ async function Upload() {
                 case 200:
                     window.location.reload();
                     break;
+                case 413:
+                    ShowError("This file is too large! (limit: 10MB)");
+                    break;
                 default:
-                    ShowError("Connection failed.")
+                    ShowError("Connection failed.");
                     break;
             }
         }
     };
     request.send(form);
+}
+
+async function Delete(attachmentId) {
+    try {
+        let response = await fetch("/api[PATH_PREFIX]/delete-attachment?mailbox=" + GetQuery("mailbox") + "&attachment=" + attachmentId);
+        if (response.status === 200) {
+            window.location.reload();
+        } else {
+            ShowError("Connection failed.");
+        }
+    } catch {
+        ShowError("Connection failed.");
+    }
 }
