@@ -22,7 +22,7 @@ public partial class MailPlugin : Plugin
         return MailboxFilterResult.NoPermanently;
     }
 
-    public SmtpResponse HandleMail(ISessionContext context, MimeMessage message, uwap.WebFramework.Mail.MailAuthResult oldAuthResult)
+    public SmtpResponse HandleMail(ISessionContext context, MimeMessage message, MailConnectionData oldAuthResult)
     {
         MailboxAddress? from = message.From.Mailboxes.FirstOrDefault();
         if (from == null || !message.To.Mailboxes.Any())

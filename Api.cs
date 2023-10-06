@@ -248,7 +248,7 @@ public partial class MailPlugin : Plugin
                         break;
                     }
                     mailbox.Lock();
-                    MailGen msg = new(new(message.From.Name, message.From.Address), message.To.Select(x => new MimeKit.MailboxAddress(x.Name, x.Address)), message.Subject, text, false);
+                    MailGen msg = new(new(message.From.Name, message.From.Address), message.To.Select(x => new MimeKit.MailboxAddress(x.Name, x.Address)), message.Subject, text, null);
                     msg.CustomChange = m =>
                     {
                         var builder = new BodyBuilder()

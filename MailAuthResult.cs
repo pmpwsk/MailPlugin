@@ -35,7 +35,7 @@ public partial class MailPlugin : Plugin
             DMARC = MailAuthVerdict.Unset;
         }
 
-        public MailAuthResult(Mail.MailAuthResult oldResult, MimeMessage message, List<string> logToPopulate) //replace oldResult with the real parameters when moving this to WF!
+        public MailAuthResult(Mail.MailConnectionData oldResult, MimeMessage message, List<string> logToPopulate) //replace oldResult with the real parameters when moving this to WF!
         {
             IPAddress = oldResult.IP.Address.ToString();
             Secure = oldResult.Secure;
