@@ -248,21 +248,13 @@ public partial class MailPlugin : Plugin
                         break;
                     }
                     mailbox.Lock();
-                    MailGen msg = new(new(message.From.Name, message.From.Address), message.To.Select(x => new MimeKit.MailboxAddress(x.Name, x.Address)), message.Subject, text, null);
-                    msg.CustomChange = m =>
+                    MailGen msg = new(new(message.From.Name, message.From.Address), message.To.Select(x => new MailboxAddress(x.Name, x.Address)), message.Subject, text, null);
+                    int counter = 0;
+                    foreach (var attachment in message.Attachments)
                     {
-                        var builder = new BodyBuilder()
-                        {
-                            TextBody = text
-                        };
-                        int counter = 0;
-                        foreach (var attachment in message.Attachments)
-                        {
-                            builder.Attachments.Add(attachment.Name, File.ReadAllBytes($"../Mail/{mailbox.Id}/0/{counter}"), ContentType.Parse(attachment.MimeType));
-                            counter++;
-                        }
-                        m.Body = builder.ToMessageBody();
-                    };
+                        msg.Attachments.Add(new($"../Mail/{mailbox.Id}/0/{counter}", attachment.Name ?? "missing file name", attachment.MimeType));
+                        counter++;
+                    }
                     var result = MailManager.Out.Send(msg, out var messageIds);
                     message.MessageId = string.Join('\n', messageIds);
                     var log = message.Log;
