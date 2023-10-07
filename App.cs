@@ -200,6 +200,13 @@ public partial class MailPlugin : Plugin
                         foreach (var bcc in message.Bcc)
                             contents.Add(new Paragraph("BCC: " + bcc.FullString));
                         e.Add(new LargeContainerElement($"{message.Subject} ({mailbox.Address})", contents) { Button = new ButtonJS("Delete", "Delete()", "red", id: "deleteButton") });
+                        if (folderName != "Sent")
+                            e.Add(new ContainerElement(null, "Actions:") { Buttons = new()
+                            {
+                                new ButtonJS("Reply", "Reply()"),
+                                new ButtonJS("Unread", "Unread()"),
+                                new Button("Move", $"{pathPrefix}/move?mailbox={mailbox.Id}&folder={folderName}&message={messageId}")
+                            }});
                         Presets.AddError(page);
                         e.Add(new ContainerElement(null, "View:") { Buttons = new()
                         {
