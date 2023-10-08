@@ -16,3 +16,12 @@ async function Delete() {
         }
     }
 }
+
+async function Unread() {
+    let response = await fetch("/api[PATH_PREFIX]/unread?mailbox=" + GetQuery("mailbox") + "&folder=" + GetQuery("folder") + "&message=" + GetQuery("message"))
+    if (response.status === 200) {
+        window.location.assign("[PATH_HOME]?mailbox=" + GetQuery("mailbox") + "&folder=" + GetQuery("folder"));
+    } else {
+        ShowError("Connection failed.");
+    }
+}
