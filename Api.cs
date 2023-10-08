@@ -322,6 +322,20 @@ public partial class MailPlugin : Plugin
                     mailbox.UnlockSave();
                 }
                 break;
+            case "/unread":
+                {
+                    if (InvalidMailboxOrMessageOrFolder(req, out var mailbox, out var message, out _, out _, out var folderName))
+                        break;
+                    if (folderName == "Sent")
+                    {
+                        req.Status = 400;
+                        break;
+                    }
+                    mailbox.Lock();
+                    message.Unread = true;
+                    mailbox.UnlockSave();
+                }
+                break;
             default:
                 req.Status = 404;
                 break;
