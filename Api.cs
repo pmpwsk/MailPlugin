@@ -249,6 +249,8 @@ public partial class MailPlugin : Plugin
                         break;
                     }
                     mailbox.Lock();
+                    message.TimestampUtc = DateTime.UtcNow;
+                    message.From = new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address);
                     MailGen msg = new(new(message.From.Name, message.From.Address), message.To.Select(x => new MailboxAddress(x.Name, x.Address)), message.Subject, text, null);
                     int counter = 0;
                     foreach (var attachment in message.Attachments)

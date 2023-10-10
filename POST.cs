@@ -35,8 +35,6 @@ public partial class MailPlugin : Plugin
                     mailbox.Lock();
                     if (mailbox.Messages.TryGetValue(0, out var message))
                     {
-                        message.TimestampUtc = DateTime.UtcNow;
-                        message.From = new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address);
                         message.To = to.Select(x => new MailAddress(x, x)).ToList();
                         message.Subject = subject;
                     }
