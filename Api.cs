@@ -7,6 +7,7 @@ using uwap.WebFramework.Accounts;
 using uwap.WebFramework.Elements;
 using uwap.WebFramework.Mail;
 using static QRCoder.PayloadGenerator;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace uwap.WebFramework.Plugins;
 
@@ -333,6 +334,24 @@ public partial class MailPlugin : Plugin
                     }
                     mailbox.Lock();
                     message.Unread = true;
+                    mailbox.UnlockSave();
+                }
+                break;
+            case "/reply":
+                {
+                    if (InvalidMailboxOrMessageOrFolder(req, out var mailbox, out var message, out _, out _, out var folderName))
+                        break;
+                    if (folderName == "Sent")
+                    {
+                        req.Status = 400;
+                        break;
+                    }
+                    mailbox.Lock();
+                    mailbox.Messages[0] = new(new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address), new() { message.From }, message.Subject, null)
+                    {
+                        InReplyToId = message.MessageId
+                    };
+                    File.WriteAllText($"../Mail/{mailbox.Id}/0/text", "");
                     mailbox.UnlockSave();
                 }
                 break;
