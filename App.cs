@@ -220,7 +220,7 @@ public partial class MailPlugin : Plugin
                         {
                             case "text":
                                 if (File.Exists(messagePath + "text"))
-                                    e.Add(new ContainerElement("Text", File.ReadAllText(messagePath + "text").HtmlSafe()));
+                                    e.Add(new ContainerElement("Text", File.ReadAllText(messagePath + "text").HtmlSafe().Replace("\n", "<br/>")));
                                 else e.Add(new ContainerElement("No text attached!", "", "red"));
                                 break;
                             case "converted":
@@ -230,7 +230,7 @@ public partial class MailPlugin : Plugin
                                 break;
                             case "html":
                                 if (File.Exists(messagePath + "html"))
-                                    e.Add(new ContainerElement("HTML", File.ReadAllText(messagePath + "html").HtmlSafe()));
+                                    e.Add(new ContainerElement("HTML", File.ReadAllText(messagePath + "html").HtmlSafe().Replace("\n", "<br/>")));
                                 else e.Add(new ContainerElement("No HTML attached!", "", "red"));
                                 break;
                         }
