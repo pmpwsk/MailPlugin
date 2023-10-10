@@ -27,7 +27,7 @@ async function Unread() {
 }
 
 async function Reply() {
-    let response = await fetch("/api[PATH_PREFIX]/unread?mailbox=" + GetQuery("mailbox") + "&folder=" + GetQuery("folder") + "&message=" + GetQuery("message"));
+    let response = await fetch("/api[PATH_PREFIX]/reply?mailbox=" + GetQuery("mailbox") + "&folder=" + GetQuery("folder") + "&message=" + GetQuery("message"));
     if (response.status === 200) {
         window.location.assign("[PATH_PREFIX]/send?mailbox=" + GetQuery("mailbox"));
     } else {
