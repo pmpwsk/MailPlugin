@@ -18,6 +18,16 @@ public partial class MailPlugin : Plugin
                 {
                     if (InvalidMailbox(req, out var mailbox))
                         break;
+                    if (mailbox.Messages.TryGetValue(0, out var message))
+                    {
+                        if (message.InReplyToId != null)
+                        {
+                            mailbox.Lock();
+                            goto WriteText;
+                        }
+                    }
+                    else message = null;
+
                     if (!(req.Query.TryGetValue("to", out var toString) && req.Query.TryGetValue("subject", out var subject)))
                     {
                         req.Status = 400;
@@ -29,11 +39,8 @@ public partial class MailPlugin : Plugin
                         await req.Write("invalid-to");
                         break;
                     }
-                    string text = await req.GetBodyText();
-                    Directory.CreateDirectory($"../Mail/{mailbox.Id}/0");
-                    File.WriteAllText($"../Mail/{mailbox.Id}/0/text", text);
                     mailbox.Lock();
-                    if (mailbox.Messages.TryGetValue(0, out var message))
+                    if (message != null)
                     {
                         message.To = to.Select(x => new MailAddress(x, x)).ToList();
                         message.Subject = subject;
@@ -42,6 +49,12 @@ public partial class MailPlugin : Plugin
                     {
                         mailbox.Messages[0] = new(new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address), to.Select(x => new MailAddress(x, x)).ToList(), subject, null);
                     }
+
+                    WriteText:
+                    string text = await req.GetBodyText();
+                    Directory.CreateDirectory($"../Mail/{mailbox.Id}/0");
+                    File.WriteAllText($"../Mail/{mailbox.Id}/0/text", text);
+
                     await req.Write("ok");
                     mailbox.UnlockSave();
                 }
