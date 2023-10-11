@@ -188,11 +188,11 @@ public partial class MailPlugin : Plugin
                         if (offset + MessagePreloadCount < folder.Count)
                             page.Sidebar.Add(new ButtonElement(null, "Older messages", $"{PathWithoutQueries(req, "offset")}&offset={offset + MessagePreloadCount}"));
                         HighlightSidebar(page, req, "view");
-                        List<IContent> contents = new()
-                        {
-                            new Paragraph(DateTimeString(AdjustDateTime(req, message.TimestampUtc))),
-                            new Paragraph("From: " + message.From.FullString)
-                        };
+                        List<IContent> contents = new();
+                        if (message.InReplyToId != null)
+                            contents.Add(new Paragraph($"This is a reply to another email (<a href=\"javascript:\" onclick=\"FindOriginal('{HttpUtility.UrlEncode(message.InReplyToId)}')\">find</a>)."));
+                        contents.Add(new Paragraph(DateTimeString(AdjustDateTime(req, message.TimestampUtc))));
+                        contents.Add(new Paragraph("From: " + message.From.FullString));
                         foreach (var to in message.To)
                             contents.Add(new Paragraph("To: " + to.FullString));
                         foreach (var cc in message.Cc)
