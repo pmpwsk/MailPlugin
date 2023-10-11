@@ -419,6 +419,9 @@ public partial class MailPlugin : Plugin
                     }
                 }
                 break;
+            default:
+                req.Status = 404;
+                break;
         }
         return Task.CompletedTask;
     }
