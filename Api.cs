@@ -357,6 +357,31 @@ public partial class MailPlugin : Plugin
                     mailbox.UnlockSave();
                 }
                 break;
+            case "/move":
+                {
+                    if (InvalidMailboxOrMessageOrFolder(req, out var mailbox, out _, out var messageId, out var folder, out var folderName))
+                        break;
+                    if (!req.Query.TryGetValue("new", out var newFolderName))
+                    {
+                        req.Status = 400;
+                        break;
+                    }
+                    if (folderName == "Sent" || newFolderName == "Sent" || folderName == newFolderName)
+                    {
+                        req.Status = 400;
+                        break;
+                    }
+                    if (!mailbox.Folders.TryGetValue(newFolderName, out var newFolder))
+                    {
+                        req.Status = 404;
+                        break;
+                    }
+                    mailbox.Lock();
+                    folder.Remove(messageId);
+                    newFolder.Add(messageId);
+                    mailbox.UnlockSave();
+                    break;
+                }
             default:
                 req.Status = 404;
                 break;
