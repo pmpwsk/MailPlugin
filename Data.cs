@@ -201,4 +201,108 @@ public partial class MailPlugin : Plugin
         }
         return false;
     }
+
+    private bool InvalidMessage(AppRequest req, [MaybeNullWhen(true)] out MailMessage message, [MaybeNullWhen(true)] out ulong messageId, Mailbox mailbox, List<IPageElement> e)
+    {
+        if (!req.Query.TryGetValue("message", out var messageIdString))
+        {
+            req.Status = 400;
+            message = null;
+            messageId = default;
+            return true;
+        }
+        if ((!ulong.TryParse(messageIdString, out messageId)) || messageId == 0 || !mailbox.Messages.TryGetValue(messageId, out message))
+        {
+            e.Add(new LargeContainerElement("Error", "This message doesn't exist!", "red"));
+            message = null;
+            messageId = default;
+            return true;
+        }
+        return false;
+    }
+
+    private bool InvalidFolder(AppRequest req, [MaybeNullWhen(true)] out SortedSet<ulong> folder, [MaybeNullWhen(true)] out string folderName, Mailbox mailbox, ulong? messageId, List<IPageElement> e)
+    {
+        if (!req.Query.TryGetValue("folder", out folderName))
+        {
+            req.Status = 400;
+            folder = null;
+            folderName = null;
+            return true;
+        }
+        if (!mailbox.Folders.TryGetValue(folderName, out folder))
+        {
+            e.Add(new LargeContainerElement("Error", "This folder doesn't exist!", "red"));
+            folder = null;
+            folderName = null;
+            return true;
+        }
+        if (messageId != null && !folder.Contains(messageId.Value))
+        {
+            e.Add(new LargeContainerElement("Error", "This message isn't part of the requested folder!", "red"));
+            folder = null;
+            folderName = null;
+            return true;
+        }
+        return false;
+    }
+
+    private bool InvalidMailboxOrMessage(AppRequest req, [MaybeNullWhen(true)] out Mailbox mailbox, [MaybeNullWhen(true)] out MailMessage message, [MaybeNullWhen(true)] out ulong messageId, List<IPageElement> e)
+    {
+        if (InvalidMailbox(req, out mailbox, e))
+        {
+            message = null;
+            messageId = default;
+            return true;
+        }
+        if (InvalidMessage(req, out message, out messageId, mailbox, e))
+        {
+            mailbox = null;
+            return true;
+        }
+        return false;
+    }
+
+    private bool InvalidMailboxOrFolder(AppRequest req, [MaybeNullWhen(true)] out Mailbox mailbox, [MaybeNullWhen(true)] out SortedSet<ulong> folder, [MaybeNullWhen(true)] out string folderName, List<IPageElement> e)
+    {
+        if (InvalidMailbox(req, out mailbox, e))
+        {
+            folder = null;
+            folderName = null;
+            return true;
+        }
+        if (InvalidFolder(req, out folder, out folderName, mailbox, null, e))
+        {
+            mailbox = null;
+            return true;
+        }
+        return false;
+    }
+
+    private bool InvalidMailboxOrMessageOrFolder(AppRequest req, [MaybeNullWhen(true)] out Mailbox mailbox, [MaybeNullWhen(true)] out MailMessage message, [MaybeNullWhen(true)] out ulong messageId, [MaybeNullWhen(true)] out SortedSet<ulong> folder, [MaybeNullWhen(true)] out string folderName, List<IPageElement> e)
+    {
+        if (InvalidMailbox(req, out mailbox, e))
+        {
+            message = null;
+            messageId = default;
+            folder = null;
+            folderName = null;
+            return true;
+        }
+        if (InvalidMessage(req, out message, out messageId, mailbox, e))
+        {
+            mailbox = null;
+            folder = null;
+            folderName = null;
+            return true;
+        }
+        if (InvalidFolder(req, out folder, out folderName, mailbox, messageId, e))
+        {
+            mailbox = null;
+            message = null;
+            messageId = default;
+            return true;
+        }
+        return false;
+    }
 }
