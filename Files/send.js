@@ -50,7 +50,10 @@ async function Save() {
     save.innerText = "Saving...";
     save.className = "green";
     try {
-        let response = await fetch("[PATH_PREFIX]/save-draft?mailbox=" + GetQuery("mailbox") + "&to=" + to.value + "&subject=" + subject.value, { method: "POST", body: ta.value });
+        let url = "[PATH_PREFIX]/save-draft?mailbox=" + GetQuery("mailbox");
+        if (subject != null)
+            url = url + "&to=" + to.value + "&subject=" + subject.value
+        let response = await fetch(url, { method: "POST", body: ta.value });
         if (response.status === 200) {
             let text = await response.text();
             switch (text) {
