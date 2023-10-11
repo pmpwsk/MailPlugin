@@ -88,42 +88,4 @@ public partial class MailPlugin : Plugin
         }
         return SmtpResponse.Ok;
     }
-
-    public void MailSent(MimeMessage message, MailSendResult result)
-    {
-        //if (Server.DebugMode)
-        //{
-            Console.WriteLine();
-            MailboxAddress from = message.From.Mailboxes.FirstOrDefault() ?? new("NO SENDER", "null@example.com");
-            MailboxAddress to = message.To.Mailboxes.FirstOrDefault() ?? new("NO RECIPIENT", "null@example.com");
-            Console.WriteLine($"OUTGOING MAIL: '{message.Subject}' from {from.Name} ({from.Address}) to {to.Name} ({to.Address})");
-            if (message.TextBody != null)
-            {
-                Console.WriteLine("TEXT:");
-                foreach (var line in message.TextBody.Split('\n'))
-                    Console.WriteLine("\t" + line);
-            }
-            if (message.HtmlBody != null)
-            {
-                Console.WriteLine("HTML:");
-                foreach (var line in message.HtmlBody.Split('\n'))
-                    Console.WriteLine("\t" + line);
-            }
-            if (result.FromSelf != null)
-            {
-                Console.WriteLine("SELF:");
-                foreach (var log in result.FromSelf.ConnectionLog)
-                    Console.WriteLine("\t" + log);
-                Console.WriteLine("Result: " + result.FromSelf.ResultType.ToString());
-            }
-            if (result.FromBackup != null)
-            {
-                Console.WriteLine("BACKUP:");
-                foreach (var log in result.FromBackup.ConnectionLog)
-                    Console.WriteLine("\t" + log);
-            Console.WriteLine("Result: " + result.FromBackup.ResultType.ToString());
-        }
-            Console.WriteLine();
-        //}
-    }
 }
