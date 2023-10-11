@@ -353,6 +353,7 @@ public partial class MailPlugin : Plugin
                     {
                         InReplyToId = message.MessageId
                     };
+                    Directory.CreateDirectory($"../Mail/{mailbox.Id}/0");
                     File.WriteAllText($"../Mail/{mailbox.Id}/0/text", "");
                     mailbox.UnlockSave();
                 }
