@@ -261,33 +261,6 @@ public partial class MailPlugin : Plugin
                 {
                     if (InvalidMailbox(req, out var mailbox, e))
                         break;
-                    page.Title = "Send an email";
-                    page.HideFooter = true;
-                    page.Scripts.Add(new Script(pathPrefix + "/query.js"));
-                    page.Scripts.Add(new Script(pathPrefix + "/send.js"));
-                    page.Sidebar.Add(new ButtonElement("Mailboxes:", null, pluginHome));
-                    foreach (var m in (Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : new HashSet<Mailbox>())
-                        .OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@')))
-                    {
-                        page.Sidebar.Add(new ButtonElement(null, m.Address, $"{pathPrefix}/send?mailbox={m.Id}"));
-                    }
-                    HighlightSidebar(page, req);
-                    e.Add(Presets.ErrorElement);
-                    page.Styles.Add(new CustomStyle(new List<string>
-                    {
-                        "#e3 { display: flex; flex-flow: column; }",
-                        "#e3 textarea { flex: 1 1 auto; }",
-                        "#e3 h1, #e3 h2, #e3 div.buttons { flex: 0 1 auto; }"
-                    }));
-                    e.Add(new LargeContainerElement("Send an email", new List<IContent>
-                    {
-                        new Paragraph($"From: {mailbox.Address}{(mailbox.Name == null ? "" : $" ({mailbox.Name})")}"),
-                    }, id: "e1") { Button = new ButtonJS("Send", "Send()", "green", id: "send") });
-                    e.Add(new ContainerElement(null, "Draft:", id: "e2") { Buttons = new()
-                    {
-                        new ButtonJS("Saved!", "Save()", id: "save"),
-                        new ButtonJS("Discard", "Discard()", "red", id: "discardButton")
-                    }});
                     string? to, subject, text;
                     if (mailbox.Messages.TryGetValue(0, out var message))
                     {
@@ -303,12 +276,47 @@ public partial class MailPlugin : Plugin
                         message = null;
                         to = null; subject = null; text = null;
                     }
-                    e.Add(new LargeContainerElement(null, new List<IContent>
+                    page.Title = (message == null || message.InReplyToId == null) ? "Send an email" : "Reply";
+                    page.HideFooter = true;
+                    page.Scripts.Add(new Script(pathPrefix + "/query.js"));
+                    page.Scripts.Add(new Script(pathPrefix + "/send.js"));
+                    page.Sidebar.Add(new ButtonElement("Mailboxes:", null, pluginHome));
+                    foreach (var m in (Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : new HashSet<Mailbox>())
+                        .OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@')))
                     {
-                        new TextBox("Recipient(s)...", to, "to", TextBoxRole.Email, autofocus: true, onInput: "MessageChanged()"),
-                        new TextBox("Subject...", subject, "subject", onInput: "MessageChanged()"),
-                        new TextArea("Message...", text, "text", onInput: "MessageChanged(); Resize()")
-                    }, id: "e3"));
+                        page.Sidebar.Add(new ButtonElement(null, m.Address, $"{pathPrefix}/send?mailbox={m.Id}"));
+                    }
+                    HighlightSidebar(page, req);
+                    page.Styles.Add(new CustomStyle(new List<string>
+                    {
+                        "#e3 { display: flex; flex-flow: column; }",
+                        "#e3 textarea { flex: 1 1 auto; }",
+                        "#e3 h1, #e3 h2, #e3 div.buttons { flex: 0 1 auto; }"
+                    }));
+                    List<IContent> headingContent = new()
+                    {
+                        new Paragraph($"From: {mailbox.Address}{(mailbox.Name == null ? "" : $" ({mailbox.Name})")}")
+                    };
+                    if (message != null && message.InReplyToId != null)
+                    {
+                        headingContent.Add(new Paragraph($"To: {to}"));
+                        headingContent.Add(new Paragraph($"Subject: {subject}"));
+                    } 
+                    e.Add(new LargeContainerElement((message == null || message.InReplyToId == null) ? "Send an email" : "Reply", headingContent, id: "e1") { Button = new ButtonJS("Send", "Send()", "green", id: "send") });
+                    e.Add(Presets.ErrorElement);
+                    e.Add(new ContainerElement(null, "Draft:", id: "e2") { Buttons = new()
+                    {
+                        new ButtonJS("Saved!", "Save()", id: "save"),
+                        new ButtonJS("Discard", "Discard()", "red", id: "discardButton")
+                    }});
+                    List<IContent> inputs = new();
+                    if (message == null || message.InReplyToId == null)
+                    {
+                        inputs.Add(new TextBox("Recipient(s)...", to, "to", TextBoxRole.Email, autofocus: true, onInput: "MessageChanged()"));
+                        inputs.Add(new TextBox("Subject...", subject, "subject", onInput: "MessageChanged()"));
+                    }
+                    inputs.Add(new TextArea("Message...", text, "text", onInput: "MessageChanged(); Resize()"));
+                    e.Add(new LargeContainerElement(null, inputs, id: "e3"));
                     int attachmentCount = message == null ? 0 : message.Attachments.Count;
                     e.Add(new ButtonElementJS(null, $"Attachments ({attachmentCount})", "GoToAttachments()", id: "e4"));
                 }
