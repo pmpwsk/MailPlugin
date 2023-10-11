@@ -346,6 +346,9 @@ public partial class MailPlugin : Plugin
                     }
                 }
                 break;
+            case "/move":
+                req.Status = 501;
+                break;
             case "/settings":
                 req.Status = 501;//mailbox id query required, check access!
                 //sending name, add/remove folders (not the pinned ones!), auth setting requirements, blocked sender addresses
