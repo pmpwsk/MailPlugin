@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc.Filters;
+using MimeKit;
 using Org.BouncyCastle.Ocsp;
 using Org.BouncyCastle.Tls.Crypto.Impl.BC;
 using System.Reflection.Metadata.Ecma335;
@@ -355,7 +356,26 @@ public partial class MailPlugin : Plugin
                 }
                 break;
             case "/move":
-                req.Status = 501;
+                {
+                    if (InvalidMailboxOrMessageOrFolder(req, out var mailbox, out var message, out var messageId, out _, out var folderName, e))
+                        break;
+                    if (folderName == "Sent")
+                    {
+                        req.Status = 400;
+                        break;
+                    }
+                    page.Title = "Move";
+                    page.Scripts.Add(new Script(pathPrefix + "/move.js"));
+                    e.Add(new LargeContainerElement("Moving", message.Subject) { Button = new Button("Cancel", $"{pluginHome}?mailbox={mailbox.Id}&folder={folderName}&message={messageId}", "red") });
+                    page.AddError();
+                    foreach (var f in mailbox.Folders.Keys)
+                        if (f == "Sent")
+                            continue;
+                        else if (f == folderName)
+                            e.Add(new ContainerElement(f, "", "green"));
+                        else
+                            e.Add(new ButtonElementJS(f, null, $"Move('{HttpUtility.UrlEncode(f)}')"));
+                }
                 break;
             case "/settings":
                 req.Status = 501;//mailbox id query required, check access!
