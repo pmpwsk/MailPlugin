@@ -412,7 +412,7 @@ public partial class MailPlugin : Plugin
                         .OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@')))
                         page.Sidebar.Add(new ButtonElement(null, m.Address, $"{pathPrefix}/settings/folders?mailbox={m.Id}"));
                     HighlightSidebar(page, req);
-                    e.Add(new LargeContainerElement("Mail folders", mailbox.Address));
+                    e.Add(new LargeContainerElement("Mail folders", new List<IContent> { new Paragraph(mailbox.Address), new Paragraph("Warning: Deleting a folder will delete all of the messages within it!") }));
                     e.Add(new ContainerElement("New folder", new TextBox("Enter a name...", null, "name", onEnter: "Create()", autofocus: true)) { Button = new ButtonJS("Create", "Create()", "green")});
                     page.AddError();
                     foreach (var f in mailbox.Folders.Keys)
