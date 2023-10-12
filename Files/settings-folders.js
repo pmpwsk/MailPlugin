@@ -1,5 +1,5 @@
-async function Delete(f) {
-    let deleteText = document.querySelector("#" + f);
+async function Delete(f, id) {
+    let deleteText = document.querySelector("#" + id);
     if (deleteText.textContent === "Delete") {
         deleteText.textContent = "Delete?";
     } else {

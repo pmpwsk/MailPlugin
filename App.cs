@@ -419,7 +419,7 @@ public partial class MailPlugin : Plugin
                     {
                         if (new[] { "Inbox", "Sent", "Spam", "Trash" }.Contains(f))
                             e.Add(new ContainerElement(null, f));
-                        else e.Add(new ContainerElement(null, f) { Button = new ButtonJS("Delete", $"Delete('{HttpUtility.UrlEncode(f)}')", "red", id: HttpUtility.UrlEncode(f)) });
+                        else e.Add(new ContainerElement(null, f) { Button = new ButtonJS("Delete", $"Delete('{HttpUtility.UrlEncode(f)}', '{f.ToId()}')", "red", id: f.ToId()) });
                     }
                 }
                 break;
