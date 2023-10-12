@@ -52,7 +52,7 @@ async function Save() {
     try {
         let url = "[PATH_PREFIX]/save-draft?mailbox=" + GetQuery("mailbox");
         if (subject != null)
-            url = url + "&to=" + to.value + "&subject=" + subject.value
+            url = url + "&to=" + encodeURIComponent(to.value) + "&subject=" + encodeURIComponent(subject.value)
         let response = await fetch(url, { method: "POST", body: ta.value });
         if (response.status === 200) {
             let text = await response.text();
