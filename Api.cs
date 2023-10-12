@@ -401,6 +401,22 @@ public partial class MailPlugin : Plugin
                     mailbox.UnlockSave();
                 }
                 break;
+            case "/delete-folder":
+                {
+                    if (InvalidMailboxOrFolder(req, out var mailbox, out var folder, out var folderName))
+                        break;
+                    mailbox.Lock();
+                    foreach (var m in folder)
+                    {
+                        string messagePath = $"../Mail/{mailbox.Id}/{m}";
+                        if (Directory.Exists(messagePath))
+                            Directory.Delete(messagePath, true);
+                        mailbox.Messages.Remove(m);
+                    }
+                    mailbox.Folders.Remove(folderName);
+                    mailbox.UnlockSave();
+                }
+                break;
             default:
                 req.Status = 404;
                 break;
