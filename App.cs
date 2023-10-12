@@ -98,7 +98,7 @@ public partial class MailPlugin : Plugin
                             new Button("Send", $"{pathPrefix}/send?mailbox={mailboxId}", "green"),
                         }
                         });
-                        foreach (var folderItem in mailbox.Folders)
+                        foreach (var folderItem in SortFolders(mailbox.Folders))
                         {
                             bool unread = GetLastReversed(folderItem.Value, MessagePreloadCount, 0).Any(x => mailbox.Messages.TryGetValue(x, out var message) && message.Unread);
                             e.Add(new ButtonElement((unread ? "(!) " : "") + folderItem.Key, null, $"{pluginHome}?mailbox={mailboxId}&folder={HttpUtility.UrlEncode(folderItem.Key)}", unread ? "red" : null));
@@ -117,7 +117,7 @@ public partial class MailPlugin : Plugin
                         //list n messages (with offset) in the folder
                         page.Title = $"{folderName} ({mailbox.Address})";
                         page.Sidebar.Add(new ButtonElement("Folders:", null, $"{pluginHome}?mailbox={mailboxId}"));
-                        foreach (var folderItem in mailbox.Folders)
+                        foreach (var folderItem in SortFolders(mailbox.Folders))
                         {
                             bool unread = GetLastReversed(folderItem.Value, MessagePreloadCount, 0).Any(x => mailbox.Messages.TryGetValue(x, out var message) && message.Unread);
                             page.Sidebar.Add(new ButtonElement(null, (unread ? "(!) " : "") + folderItem.Key, $"{pluginHome}?mailbox={mailboxId}&folder={HttpUtility.UrlEncode(folderItem.Key)}", unread ? "red" : null));
@@ -375,7 +375,7 @@ public partial class MailPlugin : Plugin
                     page.Scripts.Add(new Script(pathPrefix + "/move.js"));
                     e.Add(new LargeContainerElement("Moving", message.Subject) { Button = new Button("Cancel", $"{pluginHome}?mailbox={mailbox.Id}&folder={folderName}&message={messageId}", "red") });
                     page.AddError();
-                    foreach (var f in mailbox.Folders.Keys)
+                    foreach (var f in SortFolders(mailbox.Folders.Keys))
                         if (f == "Sent")
                             continue;
                         else if (f == folderName)
@@ -415,7 +415,7 @@ public partial class MailPlugin : Plugin
                     e.Add(new LargeContainerElement("Mail folders", new List<IContent> { new Paragraph(mailbox.Address), new Paragraph("Warning: Deleting a folder will delete all of the messages within it!") }));
                     e.Add(new ContainerElement("New folder", new TextBox("Enter a name...", null, "name", onEnter: "Create()", autofocus: true)) { Button = new ButtonJS("Create", "Create()", "green")});
                     page.AddError();
-                    foreach (var f in mailbox.Folders.Keys)
+                    foreach (var f in SortFolders(mailbox.Folders.Keys))
                     {
                         if (new[] { "Inbox", "Sent", "Spam", "Trash" }.Contains(f))
                             e.Add(new ContainerElement(null, f));

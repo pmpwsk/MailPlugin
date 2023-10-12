@@ -38,6 +38,24 @@ public partial class MailPlugin : Plugin
         }
     }
 
+    private static IEnumerable<string> SortFolders(IEnumerable<string> folderNames)
+    {
+        var def = new[] { "Inbox", "Sent", "Trash", "Spam" };
+        foreach (var f in def)
+            yield return f;
+        foreach (var f in folderNames.Except(def).Order())
+            yield return f;
+    }
+
+    private IEnumerable<KeyValuePair<string,SortedSet<ulong>>> SortFolders(Dictionary<string,SortedSet<ulong>> folders)
+    {
+        var def = new[] { "Inbox", "Sent", "Trash", "Spam" }.Select(x => new KeyValuePair<string, SortedSet<ulong>>(x, folders[x]));
+        foreach (var f in def)
+            yield return f;
+        foreach (var f in folders.Except(def).OrderBy(x => x.Key))
+            yield return f;
+    }
+
     private bool InvalidMailbox(IRequest req, [MaybeNullWhen(true)] out Mailbox mailbox)
     {
         if (req.GetType() == typeof(AppRequest))
