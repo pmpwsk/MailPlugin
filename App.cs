@@ -91,7 +91,13 @@ public partial class MailPlugin : Plugin
                             page.Sidebar.Add(new ButtonElement(null, (unread ? "(!) " : "") + m.Address, $"{pluginHome}?mailbox={m.Id}", unread ? "red" : null));
                         }
                         HighlightSidebar(page, req);
-                        e.Add(new LargeContainerElement($"Mail ({mailbox.Address})", "", "overflow") { Button = new Button("Send", $"{pathPrefix}/send?mailbox={mailboxId}", "green")});
+                        e.Add(new LargeContainerElement($"Mail ({mailbox.Address})", "", "overflow"));
+                        e.Add(new ContainerElement(null, "Actions:") { Buttons = new()
+                        {
+                            new Button("Settings", $"{pathPrefix}/settings?mailbox={mailboxId}"),
+                            new Button("Send", $"{pathPrefix}/send?mailbox={mailboxId}", "green"),
+                        }
+                        });
                         foreach (var folderItem in mailbox.Folders)
                         {
                             bool unread = GetLastReversed(folderItem.Value, MessagePreloadCount, 0).Any(x => mailbox.Messages.TryGetValue(x, out var message) && message.Unread);
