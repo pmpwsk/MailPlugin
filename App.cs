@@ -365,6 +365,7 @@ public partial class MailPlugin : Plugin
                         break;
                     }
                     page.Title = "Move";
+                    page.Scripts.Add(new Script(pathPrefix + "/query.js"));
                     page.Scripts.Add(new Script(pathPrefix + "/move.js"));
                     e.Add(new LargeContainerElement("Moving", message.Subject) { Button = new Button("Cancel", $"{pluginHome}?mailbox={mailbox.Id}&folder={folderName}&message={messageId}", "red") });
                     page.AddError();
