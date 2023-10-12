@@ -400,6 +400,29 @@ public partial class MailPlugin : Plugin
                     e.Add(new ButtonElement("Folders", null, $"{pathPrefix}/settings/folders?mailbox={mailbox.Id}"));
                 }
                 break;
+            case "/settings/folders":
+                {
+                    if (InvalidMailbox(req, out var mailbox, e))
+                        break;
+                    page.Title = "Mail folders";
+                    page.Scripts.Add(new Script(pathPrefix + "/query.js"));
+                    page.Scripts.Add(new Script(pathPrefix + "/settings-folders.js"));
+                    page.Sidebar.Add(new ButtonElement("Mailboxes:", null, pluginHome));
+                    foreach (var m in (Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : new HashSet<Mailbox>())
+                        .OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@')))
+                        page.Sidebar.Add(new ButtonElement(null, m.Address, $"{pathPrefix}/settings/folders?mailbox={m.Id}"));
+                    HighlightSidebar(page, req);
+                    e.Add(new LargeContainerElement("Mail folders", mailbox.Address));
+                    e.Add(new ContainerElement("New folder", new TextBox("Enter a name...", null, "name", onEnter: "Create()", autofocus: true)) { Button = new ButtonJS("Create", "Create()", "green")});
+                    page.AddError();
+                    foreach (var f in mailbox.Folders.Keys)
+                    {
+                        if (new[] { "Inbox", "Sent", "Spam", "Trash" }.Contains(f))
+                            e.Add(new ContainerElement(null, f));
+                        else e.Add(new ContainerElement(null, f) { Button = new ButtonJS("Delete", $"Delete('{HttpUtility.UrlEncode(f)}')", "red", id: HttpUtility.UrlEncode(f)) });
+                    }
+                }
+                break;
             case "/manage":
                 if (!req.IsAdmin())
                 {
