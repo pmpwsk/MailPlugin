@@ -385,8 +385,20 @@ public partial class MailPlugin : Plugin
                 }
                 break;
             case "/settings":
-                req.Status = 501;//mailbox id query required, check access!
-                //sending name, add/remove folders (not the pinned ones!), auth setting requirements, blocked sender addresses
+                {
+                    if (InvalidMailbox(req, out var mailbox, e))
+                        break;
+                    page.Title = "Mail settings";
+                    page.Scripts.Add(new Script(pathPrefix + "/query.js"));
+                    page.Scripts.Add(new Script(pathPrefix + "/settings.js"));
+                    page.Sidebar.Add(new ButtonElement("Mailboxes:", null, pluginHome));
+                    foreach (var m in (Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : new HashSet<Mailbox>())
+                        .OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@')))
+                        page.Sidebar.Add(new ButtonElement(null, m.Address, $"{pathPrefix}/settings?mailbox={m.Id}"));
+                    HighlightSidebar(page, req);
+                    e.Add(new LargeContainerElement("Mail settings", mailbox.Address));
+                    e.Add(new ButtonElement("Folders", null, $"{pathPrefix}/settings/folders?mailbox={mailbox.Id}"));
+                }
                 break;
             case "/manage":
                 if (!req.IsAdmin())
