@@ -417,6 +417,21 @@ public partial class MailPlugin : Plugin
                     mailbox.UnlockSave();
                 }
                 break;
+            case "/set-name":
+                {
+                    if (InvalidMailbox(req, out var mailbox))
+                        break;
+                    if (!req.Query.TryGetValue("name", out var name))
+                    {
+                        req.Status = 400;
+                        break;
+                    }
+                    if (name == "") name = null;
+                    mailbox.Lock();
+                    mailbox.Name = name;
+                    mailbox.UnlockSave();
+                }
+                break;
             default:
                 req.Status = 404;
                 break;
