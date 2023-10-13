@@ -398,6 +398,7 @@ public partial class MailPlugin : Plugin
                     HighlightSidebar(page, req);
                     e.Add(new LargeContainerElement("Mail settings", mailbox.Address));
                     e.Add(new ButtonElement("Folders", null, $"{pathPrefix}/settings/folders?mailbox={mailbox.Id}"));
+                    e.Add(new ContainerElement("Name", new TextBox("Enter a name...", mailbox.Name, "name", onEnter: "SaveName()")) { Button = new ButtonJS("Saved!", "SaveName()") });
                 }
                 break;
             case "/settings/folders":
