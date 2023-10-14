@@ -38,6 +38,12 @@ public partial class MailPlugin : Plugin
         }
     }
 
+    /// <summary>
+    /// Adds an s to the unit if the count isn't 1.
+    /// </summary>
+    private static string CountString(int count, string unit)
+        => $"{count} {unit}{(count == 1 ? "" : "s")}";
+
     private static IEnumerable<string> SortFolders(IEnumerable<string> folderNames)
     {
         var def = new[] { "Inbox", "Sent", "Trash", "Spam" };
