@@ -134,7 +134,7 @@ public partial class MailPlugin : Plugin
                             string offsetQuery = offset == 0 ? "" : $"&offset={offset}";
                             foreach (var mId in GetLastReversed(folder, MessagePreloadCount, offset))
                                 if (mailbox.Messages.TryGetValue(mId, out var m))
-                                    e.Add(new ButtonElement(m.Subject, m.From.FullString, $"{pluginHome}?mailbox={mailboxId}&folder={HttpUtility.UrlEncode(folderName)}&message={mId}{offsetQuery}", m.Unread ? "red" : null));
+                                    e.Add(new ButtonElement(m.Subject, m.From.FullString + "<br/>" + DateTimeString(AdjustDateTime(req, m.TimestampUtc)), $"{pluginHome}?mailbox={mailboxId}&folder={HttpUtility.UrlEncode(folderName)}&message={mId}{offsetQuery}", m.Unread ? "red" : null));
                             if (offset + MessagePreloadCount < folder.Count)
                                 e.Add(new ButtonElement(null, "Older messages", $"{PathWithoutQueries(req, "offset")}&offset={offset + MessagePreloadCount}"));
                         }
