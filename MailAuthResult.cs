@@ -2,6 +2,7 @@
 using SmtpServer;
 using System.Net;
 using System.Runtime.Serialization;
+using uwap.WebFramework.Mail;
 
 namespace uwap.WebFramework.Plugins;
 
@@ -25,20 +26,10 @@ public partial class MailPlugin : Plugin
         [DataMember]
         public readonly MailAuthVerdict DMARC;
 
-        public MailAuthResult(ISessionContext context, MimeMessage message, List<string> logToPopulate)
+        public MailAuthResult(MailConnectionData connectionData, MimeMessage message, List<string> logToPopulate) //replace oldResult with the real parameters when moving this to WF!
         {
-            IPAddress = ((IPEndPoint)context.Properties["EndpointListener:RemoteEndPoint"]).Address.ToString();
-            Secure = context.Pipe.IsSecure;
-
-            SPF = MailAuthVerdictSPF.Unset;
-            DKIM = MailAuthVerdict.Unset;
-            DMARC = MailAuthVerdict.Unset;
-        }
-
-        public MailAuthResult(Mail.MailConnectionData oldResult, MimeMessage message, List<string> logToPopulate) //replace oldResult with the real parameters when moving this to WF!
-        {
-            IPAddress = oldResult.IP.Address.ToString();
-            Secure = oldResult.Secure;
+            IPAddress = connectionData.IP.Address.ToString();
+            Secure = connectionData.Secure;
 
             SPF = MailAuthVerdictSPF.Unset;
             logToPopulate.Add("SPF checking was skipped (501).");
