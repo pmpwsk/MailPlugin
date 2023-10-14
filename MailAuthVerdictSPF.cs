@@ -2,7 +2,7 @@
 
 public partial class MailPlugin : Plugin
 {
-    public enum MailAuthVerdict
+    public enum MailAuthVerdictSPF
     {
         HardFail = -2,
         SoftFail = -1,
