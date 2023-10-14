@@ -101,7 +101,7 @@ public partial class MailPlugin : Plugin
                         foreach (var folderItem in SortFolders(mailbox.Folders))
                         {
                             bool unread = GetLastReversed(folderItem.Value, MessagePreloadCount, 0).Any(x => mailbox.Messages.TryGetValue(x, out var message) && message.Unread);
-                            e.Add(new ButtonElement((unread ? "(!) " : "") + folderItem.Key, null, $"{pluginHome}?mailbox={mailboxId}&folder={HttpUtility.UrlEncode(folderItem.Key)}", unread ? "red" : null));
+                            e.Add(new ButtonElement((unread ? "(!) " : "") + folderItem.Key, CountString(folderItem.Value.Count, "message"), $"{pluginHome}?mailbox={mailboxId}&folder={HttpUtility.UrlEncode(folderItem.Key)}", unread ? "red" : null));
                         }
                         break;
                     }
