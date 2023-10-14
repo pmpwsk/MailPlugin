@@ -17,7 +17,7 @@ public partial class MailPlugin : Plugin
         public readonly bool Secure;
 
         [DataMember]
-        public readonly MailAuthVerdict SPF;
+        public readonly MailAuthVerdictSPF SPF;
 
         [DataMember]
         public readonly MailAuthVerdict DKIM;
@@ -30,7 +30,7 @@ public partial class MailPlugin : Plugin
             IPAddress = ((IPEndPoint)context.Properties["EndpointListener:RemoteEndPoint"]).Address.ToString();
             Secure = context.Pipe.IsSecure;
 
-            SPF = MailAuthVerdict.Unset;
+            SPF = MailAuthVerdictSPF.Unset;
             DKIM = MailAuthVerdict.Unset;
             DMARC = MailAuthVerdict.Unset;
         }
@@ -40,7 +40,7 @@ public partial class MailPlugin : Plugin
             IPAddress = oldResult.IP.Address.ToString();
             Secure = oldResult.Secure;
 
-            SPF = MailAuthVerdict.Unset;
+            SPF = MailAuthVerdictSPF.Unset;
             logToPopulate.Add("SPF checking was skipped (501).");
             DKIM = MailAuthVerdict.Unset;
             logToPopulate.Add("DKIM checking was skipped (501).");
