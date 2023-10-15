@@ -26,12 +26,12 @@ public partial class MailPlugin : Plugin
         [DataMember]
         public readonly MailAuthVerdict DMARC;
 
-        public MailAuthResult(MailConnectionData connectionData, MimeMessage message, List<string> logToPopulate) //replace oldResult with the real parameters when moving this to WF!
+        public MailAuthResult(MailConnectionData connectionData, MimeMessage message, List<string> logToPopulate)
         {
             IPAddress = connectionData.IP.Address.ToString();
             Secure = connectionData.Secure;
 
-            logToPopulate.Add("Sent from: " + IPAddress);
+            logToPopulate.Add("From: " + IPAddress);
             logToPopulate.Add("Secure: " + Secure.ToString());
 
             SPF = MailAuthVerdictSPF.Unset;
