@@ -31,6 +31,9 @@ public partial class MailPlugin : Plugin
             IPAddress = connectionData.IP.Address.ToString();
             Secure = connectionData.Secure;
 
+            logToPopulate.Add("Sent from: " + IPAddress);
+            logToPopulate.Add("Secure: " + Secure.ToString());
+
             SPF = MailAuthVerdictSPF.Unset;
             logToPopulate.Add("SPF checking was skipped (501).");
             DKIM = MailAuthVerdict.Unset;
