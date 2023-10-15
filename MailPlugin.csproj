@@ -10,4 +10,8 @@
     <PackageReference Include="uwap.WebFramework" Version="1.4.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Authentication\" />
+  </ItemGroup>
+
 </Project>
