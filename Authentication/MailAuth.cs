@@ -7,7 +7,7 @@ public partial class MailPlugin : Plugin
     /// <param name="domain">The domain to look up, including the specific subdomain such as {selector}._domainkey for DKIM or _dmarc for DMARC.</param>
     /// <param name="protocol">The protocol (case insensitive), such as spf1. DKIM and DMARC use null because their protocol field is optional. </param>
     /// <param name="requiredFields">Every subarray of this array must have at least one item present as a field key.</param>
-    public static List<KeyValuePair<string,string?>>? ResolveTXT(string domain, string? protocol, string[][] requiredFields)
+    private static List<KeyValuePair<string,string?>>? ResolveTXT(string domain, string? protocol, string[][] requiredFields)
     {
         var query = MailManager.DnsLookup.Query(domain, DnsClient.QueryType.TXT);
         var records = query.Answers.TxtRecords();
