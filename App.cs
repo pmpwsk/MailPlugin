@@ -247,7 +247,12 @@ public partial class MailPlugin : Plugin
                             int attachmentId = 0;
                             foreach (var attachment in message.Attachments)
                             {
-                                e.Add(new ContainerElement(null, new List<IContent> { new Paragraph(attachment.Name ?? "Unknown name"), new Paragraph(attachment.MimeType ?? "Unknown type") }) { Buttons = new()
+                                e.Add(new ContainerElement(null, new List<IContent>
+                                {
+                                    new Paragraph(attachment.Name ?? "Unknown name"),
+                                    new Paragraph(attachment.MimeType ?? "Unknown type"),
+                                    new Paragraph(FileSizeString(new FileInfo($"../Mail/{mailbox.Id}/{messageId}/{attachmentId}").Length))
+                                }) { Buttons = new()
                                 {
                                     new Button("View", $"/api{pathPrefix}/attachment?mailbox={mailboxId}&message={messageId}&attachment={attachmentId}", newTab: true),
                                     new Button("Download", $"/dl{pathPrefix}/attachment?mailbox={mailboxId}&message={messageId}&attachment={attachmentId}", newTab: true)
