@@ -249,9 +249,9 @@ public partial class MailPlugin : Plugin
                             {
                                 e.Add(new ContainerElement(null, new List<IContent>
                                 {
-                                    new Paragraph(attachment.Name ?? "Unknown name"),
-                                    new Paragraph(attachment.MimeType ?? "Unknown type"),
-                                    new Paragraph(FileSizeString(new FileInfo($"../Mail/{mailbox.Id}/{messageId}/{attachmentId}").Length))
+                                    new Paragraph("File: " + attachment.Name ?? "Unknown name"),
+                                    new Paragraph("Type: " + attachment.MimeType ?? "Unknown type"),
+                                    new Paragraph("Size: " + FileSizeString(new FileInfo($"../Mail/{mailbox.Id}/{messageId}/{attachmentId}").Length))
                                 }) { Buttons = new()
                                 {
                                     new Button("View", $"/api{pathPrefix}/attachment?mailbox={mailboxId}&message={messageId}&attachment={attachmentId}", newTab: true),
