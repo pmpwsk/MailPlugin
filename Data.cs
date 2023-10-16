@@ -22,6 +22,15 @@ public partial class MailPlugin : Plugin
     private static string DateTimeString(DateTime dt)
         => $"{dt.DayOfWeek}, {dt.Year}/{dt.Month}/{dt.Day}, {dt.ToShortTimeString()}";
 
+    private static readonly string[] FileSizeUnits = new[] { "B", "KB", "MB", "GB", "TB", "PB", "EB" };
+    private static string FileSizeString(long size)
+    {
+        int factor = (int)Math.Floor(Math.Log(size, 1000));
+        if (factor >= FileSizeUnits.Length)
+            factor = FileSizeUnits.Length - 1;
+        return $"{Math.Round(size / Math.Pow(1000, factor), 1, MidpointRounding.AwayFromZero)} {FileSizeUnits[factor]}";
+    }
+
     private static DateTime AdjustDateTime(IRequest req, DateTime dateTime)
     {
         try
