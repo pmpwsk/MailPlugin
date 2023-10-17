@@ -61,7 +61,7 @@ public partial class MailPlugin : Plugin
                 }
             }
         }
-        else
+        else if (PrintUnrecognizedToConsole)
         {
             MailboxAddress to = message.To.Mailboxes.FirstOrDefault() ?? new("NO RECIPIENT", "null@example.com");
             Console.WriteLine();

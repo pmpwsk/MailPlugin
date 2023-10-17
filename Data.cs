@@ -11,6 +11,8 @@ public partial class MailPlugin : Plugin
 
     public ushort MessagePreloadCount = 25;
 
+    public bool PrintUnrecognizedToConsole = true;
+
     private static IEnumerable<ulong> GetLastReversed(IEnumerable<ulong> source, int count, int offset)
     {
         int n = source.Count() - count - offset;
