@@ -22,7 +22,7 @@ public partial class MailPlugin : Plugin
         return MailboxFilterResult.NoPermanently;
     }
 
-    public SmtpResponse HandleMail(ISessionContext context, MimeMessage message, MailConnectionData oldAuthResult)
+    public SmtpResponse HandleMail(ISessionContext context, MimeMessage message, MailConnectionData connectionData)
     {
         MailboxAddress? from = message.From.Mailboxes.FirstOrDefault();
         if (from == null || !message.To.Mailboxes.Any())
@@ -31,7 +31,7 @@ public partial class MailPlugin : Plugin
         if (mailboxes.Any())
         {
             List<string> log = new();
-            MailAuthResult authResult = new(oldAuthResult, message, log);
+            MailAuthResult authResult = new(connectionData, message, log);
             List<MailAttachment> attachments = message.Attachments.Select(x => new MailAttachment(x.ContentDisposition.FileName, x.ContentType.MimeType)).ToList();
             MailMessage mail = new(true, DateTime.UtcNow, message, attachments, authResult, log);
             foreach (string toAddress in mailboxes.Select(x => x.Address))
@@ -65,7 +65,7 @@ public partial class MailPlugin : Plugin
         {
             MailboxAddress to = message.To.Mailboxes.FirstOrDefault() ?? new("NO RECIPIENT", "null@example.com");
             Console.WriteLine();
-            Console.WriteLine($"UNRECOGNIZED MAIL (Secure={oldAuthResult.Secure}, Host={oldAuthResult.IP.Address}) '{message.Subject}' from {from.Name} ({from.Address}) to {to.Name} ({to.Address})");
+            Console.WriteLine($"UNRECOGNIZED MAIL (Secure={connectionData.Secure}, Host={connectionData.IP.Address}) '{message.Subject}' from {from.Name} ({from.Address}) to {to.Name} ({to.Address})");
             if (message.TextBody != null)
             {
                 Console.WriteLine("TEXT:");
