@@ -9,7 +9,7 @@ public partial class MailPlugin : Plugin
 {
     private readonly MailboxTable Mailboxes = MailboxTable.Import("Mail");
 
-    private const ushort MessagePreloadCount = 25;
+    public ushort MessagePreloadCount = 25;
 
     private static IEnumerable<ulong> GetLastReversed(IEnumerable<ulong> source, int count, int offset)
     {
