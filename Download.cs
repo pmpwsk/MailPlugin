@@ -1,8 +1,4 @@
-﻿using Org.BouncyCastle.Ocsp;
-using System.Text;
-using uwap.WebFramework.Accounts;
-
-namespace uwap.WebFramework.Plugins;
+﻿namespace uwap.WebFramework.Plugins;
 
 public partial class MailPlugin : Plugin
 {

@@ -1,13 +1,6 @@
-﻿using Microsoft.AspNetCore.Server.HttpSys;
-using MimeKit;
-using System.Diagnostics.Eventing.Reader;
-using System.Web;
-using uwap.Database;
+﻿using MimeKit;
 using uwap.WebFramework.Accounts;
-using uwap.WebFramework.Elements;
 using uwap.WebFramework.Mail;
-using static QRCoder.PayloadGenerator;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace uwap.WebFramework.Plugins;
 

@@ -1,5 +1,4 @@
 ﻿using System.Net;
-using uwap.WebFramework.Mail;
 
 namespace uwap.WebFramework.Plugins;
 

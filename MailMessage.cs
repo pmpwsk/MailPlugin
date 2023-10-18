@@ -1,7 +1,5 @@
 ﻿using MimeKit;
-using System.Net.Mail;
 using System.Runtime.Serialization;
-using System.Threading;
 
 namespace uwap.WebFramework.Plugins;
 

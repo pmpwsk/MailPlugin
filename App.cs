@@ -1,15 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc.Filters;
-using MimeKit;
-using Org.BouncyCastle.Ocsp;
-using Org.BouncyCastle.Tls.Crypto.Impl.BC;
-using System.Reflection.Metadata.Ecma335;
-using System.Security.Cryptography;
-using System.Threading;
-using System.Web;
+﻿using System.Web;
 using uwap.WebFramework.Accounts;
 using uwap.WebFramework.Elements;
-using static MailKit.Net.Imap.ImapMailboxFilter;
-using static QRCoder.PayloadGenerator;
 
 namespace uwap.WebFramework.Plugins;
 

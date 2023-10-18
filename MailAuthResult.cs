@@ -1,6 +1,4 @@
 ﻿using MimeKit;
-using SmtpServer;
-using System.Net;
 using System.Runtime.Serialization;
 using uwap.WebFramework.Mail;
 
