@@ -38,6 +38,7 @@ public partial class MailPlugin : Plugin
                     {/////
                         //list mailboxes that the user has access to or an error if none were found, redirect to mailbox if only one is present and user isn't admin
                         page.Title = "Mailboxes";
+                        page.Head.Add("<meta http-equiv=\"refresh\" content=\"300\">");
                         bool isAdmin = req.IsAdmin();
                         var mailboxes = (Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : new HashSet<Mailbox>())
                             .OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@'));
