@@ -51,11 +51,15 @@ public partial class MailPlugin : Plugin
                             }
                             if (mailboxes.Any())
                             {
+                                bool anyUnread = false;
                                 foreach (Mailbox m in mailboxes)
                                 {
                                     bool unread = GetLastReversed(m.Folders["Inbox"], MessagePreloadCount, 0).Any(x => m.Messages.TryGetValue(x, out var message) && message.Unread);
+                                    if (unread) anyUnread = true;
                                     e.Add(new ButtonElement((unread ? "(!) " : "") + m.Address, m.Name ?? "", $"{pluginHome}?mailbox={m.Id}", unread ? "red" : null));
                                 }
+                                if (anyUnread)
+                                    page.Favicon = pathPrefix + "/icon-red.ico";
                             }
                             else
                             {
