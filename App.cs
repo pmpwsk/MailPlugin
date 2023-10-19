@@ -202,7 +202,7 @@ public partial class MailPlugin : Plugin
                             contents.Add(new Paragraph("CC: " + cc.FullString));
                         foreach (var bcc in message.Bcc)
                             contents.Add(new Paragraph("BCC: " + bcc.FullString));
-                        e.Add(new LargeContainerElement($"{message.Subject} ({mailbox.Address})", contents) { Button = new ButtonJS("Delete", "Delete()", "red", id: "deleteButton") });
+                        e.Add(new LargeContainerElement($"{message.Subject}", contents) { Button = new ButtonJS("Delete", "Delete()", "red", id: "deleteButton") });
                         if (folderName != "Sent")
                             e.Add(new ContainerElement(null, "Actions:") { Buttons = new()
                             {
