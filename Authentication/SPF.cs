@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using NetTools;
+using System.Net;
 using System.Net.Sockets;
 using uwap.WebFramework.Mail;
 
@@ -79,7 +80,7 @@ public partial class MailPlugin : Plugin
                     case "+ip6":
                     case "?ip6":
                         {
-                            if (field.Value != null && IPAddress.TryParse(field.Value, out var fieldIP) && ip.Equals(fieldIP))
+                            if (field.Value != null && EqualsOrContainsIP(field.Value, ip))
                             {
                                 passedDomain = domain;
                                 return MailAuthVerdictSPF.Pass;
@@ -141,5 +142,20 @@ public partial class MailPlugin : Plugin
         {
             return false;
         }
+    }
+
+    private static bool EqualsOrContainsIP(string addressOrRangeString, IPAddress ip)
+    {
+        if (IPAddress.TryParse(addressOrRangeString, out var fieldIP))
+        {
+            if (ip.Equals(fieldIP))
+                return true;
+        }
+        else if (IPAddressRange.TryParse(addressOrRangeString, out var ipRange))
+        {
+            if (ipRange.Contains(ip))
+                return true;
+        }
+        return false;
     }
 }
