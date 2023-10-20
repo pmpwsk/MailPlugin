@@ -52,8 +52,18 @@ public partial class MailPlugin : Plugin
                     case "mx":
                     case "+mx":
                     case "?mx":
-                        ////////////////////////
-                        break;
+                        {
+                            var mxQuery = MailManager.DnsLookup.Query(domain, DnsClient.QueryType.MX);
+                            var mxRecords = mxQuery.Answers.MxRecords();
+                            foreach (var mx in mxRecords)
+                                if (IPAddress.TryParse(mx.Exchange, out var mxIP))
+                                {
+                                    if (ip.Equals(mxIP))
+                                        return MailAuthVerdictSPF.Pass;
+                                }
+                                else if (MatchAorAAAA(mx.Exchange, ip) != null)
+                                    return MailAuthVerdictSPF.Pass;
+                        } break;
                     case "ip4":
                     case "+ip4":
                     case "?ip4":
