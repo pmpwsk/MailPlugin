@@ -4,10 +4,10 @@ namespace uwap.WebFramework.Plugins;
 
 public partial class MailPlugin : Plugin
 {
-    private MailAuthVerdictSPF CheckSPF(string domain, string sender)
+    private static MailAuthVerdictSPF CheckSPF(string domain, string sender)
         => CheckSPF(domain, IPAddress.Parse(sender), 0, false);
 
-    private MailAuthVerdictSPF CheckSPF(string domain, IPAddress ip, int depth, bool isInclude)
+    private static MailAuthVerdictSPF CheckSPF(string domain, IPAddress ip, int depth, bool isInclude)
     {
         try
         {
