@@ -39,8 +39,16 @@ public partial class MailPlugin : Plugin
                     case "a":
                     case "+a":
                     case "?a":
-                        //////////////////////// check a and aaaa! >> multiple results may exist for each one too
-                        break;
+                        {
+                            if (field.Value != null && IPAddress.TryParse(field.Value, out var fieldIP))
+                            {
+                                var result = MatchAorAAAA(domain, fieldIP);
+                                if (result != null)
+                                {
+                                    return MailAuthVerdictSPF.Pass;
+                                }
+                            }
+                        } break;
                     case "mx":
                     case "+mx":
                     case "?mx":
