@@ -1,4 +1,6 @@
 ﻿using System.Net;
+using System.Net.Sockets;
+using uwap.WebFramework.Mail;
 
 namespace uwap.WebFramework.Plugins;
 
@@ -57,6 +59,50 @@ public partial class MailPlugin : Plugin
         catch
         {
             return MailAuthVerdictSPF.Unset;
+        }
+    }
+
+    private static IPAddress? MatchAorAAAA(string domain, IPAddress ip, int depth = 0)
+    {
+        try
+        {
+            if (depth >= 10)
+                return null;
+
+            //a or aaaa
+            switch (ip.AddressFamily)
+            {
+                case AddressFamily.InterNetwork:
+                    var aQuery = MailManager.DnsLookup.Query(domain, DnsClient.QueryType.A);
+                    var aRecords = aQuery.Answers.ARecords();
+                    foreach (var a in aRecords)
+                        if (ip.Equals(a.Address))
+                            return a.Address;
+                    break;
+                case AddressFamily.InterNetworkV6:
+                    var aaaaQuery = MailManager.DnsLookup.Query(domain, DnsClient.QueryType.AAAA);
+                    var aaaaRecords = aaaaQuery.Answers.AaaaRecords();
+                    foreach (var aaaa in aaaaRecords)
+                        if (ip.Equals(aaaa.Address))
+                            return aaaa.Address;
+                    break;
+            }
+
+            //cname
+            var cnameQuery = MailManager.DnsLookup.Query(domain, DnsClient.QueryType.CNAME);
+            var cnameRecords = cnameQuery.Answers.CnameRecords();
+            foreach (var cname in cnameRecords)
+            {
+                var result = MatchAorAAAA(cname.CanonicalName, ip, depth + 1);
+                if (result != null)
+                    return result;
+            }
+
+            return null;
+        }
+        catch
+        {
+            return null;
         }
     }
 }
