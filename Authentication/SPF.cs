@@ -37,17 +37,27 @@ public partial class MailPlugin : Plugin
                     case "?all":
                         return MailAuthVerdictSPF.Unset;
                     case "a":
+                    case "+a":
+                    case "?a":
                         //////////////////////// check a and aaaa! >> multiple results may exist for each one too
                         break;
                     case "mx":
+                    case "+mx":
+                    case "?mx":
                         ////////////////////////
                         break;
                     case "ip4":
+                    case "+ip4":
+                    case "?ip4":
                     case "ip6":
+                    case "+ip6":
+                    case "?ip6":
                         if (field.Value != null && IPAddress.TryParse(field.Value, out var fieldIP) && ip.Equals(fieldIP))
                             return MailAuthVerdictSPF.Pass;
                         break;
                     case "include":
+                    case "+include":
+                    case "?include":
                         if (field.Value != null && CheckSPF(field.Value, ip, depth + 1, true) == MailAuthVerdictSPF.Pass)
                             return MailAuthVerdictSPF.Pass;
                         break;
