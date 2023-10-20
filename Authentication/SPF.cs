@@ -6,11 +6,13 @@ namespace uwap.WebFramework.Plugins;
 
 public partial class MailPlugin : Plugin
 {
-    private static MailAuthVerdictSPF CheckSPF(string domain, string sender)
-        => CheckSPF(domain, IPAddress.Parse(sender), 0, false);
+    private static MailAuthVerdictSPF CheckSPF(string domain, string sender, out string? passedDomain)
+        => CheckSPF(domain, IPAddress.Parse(sender), 0, false, out passedDomain);
 
-    private static MailAuthVerdictSPF CheckSPF(string domain, IPAddress ip, int depth, bool isInclude)
+    private static MailAuthVerdictSPF CheckSPF(string domain, IPAddress ip, int depth, bool isInclude, out string? passedDomain)
     {
+        passedDomain = null;
+
         try
         {
             if (depth >= 10)
@@ -21,14 +23,17 @@ public partial class MailPlugin : Plugin
                 return MailAuthVerdictSPF.Unset;
             foreach (var field in fields)
                 if (field.Key == "redirect" && field.Value != null)
-                    return CheckSPF(field.Value, ip, depth + 1, false);
+                    return CheckSPF(field.Value, ip, depth + 1, false, out passedDomain);
 
             foreach (var field in fields)
                 switch (field.Key)
                 {
                     case "+all":
                         if (!isInclude)
+                        {
+                            passedDomain = domain;
                             return MailAuthVerdictSPF.Pass;
+                        }
                         else return MailAuthVerdictSPF.Unset;
                     case "-all":
                         return MailAuthVerdictSPF.HardFail;
@@ -41,7 +46,10 @@ public partial class MailPlugin : Plugin
                     case "?a":
                         {
                             if (field.Value != null && IPAddress.TryParse(field.Value, out var fieldIP) && MatchAorAAAA(domain, fieldIP))
+                            {
+                                passedDomain = domain;
                                 return MailAuthVerdictSPF.Pass;
+                            }
                         } break;
                     case "mx":
                     case "+mx":
@@ -53,10 +61,16 @@ public partial class MailPlugin : Plugin
                                 if (IPAddress.TryParse(mx.Exchange, out var mxIP))
                                 {
                                     if (ip.Equals(mxIP))
+                                    {
+                                        passedDomain = domain;
                                         return MailAuthVerdictSPF.Pass;
+                                    }
                                 }
                                 else if (MatchAorAAAA(mx.Exchange, ip))
+                                {
+                                    passedDomain = domain;
                                     return MailAuthVerdictSPF.Pass;
+                                }
                         } break;
                     case "ip4":
                     case "+ip4":
@@ -66,12 +80,15 @@ public partial class MailPlugin : Plugin
                     case "?ip6":
                         {
                             if (field.Value != null && IPAddress.TryParse(field.Value, out var fieldIP) && ip.Equals(fieldIP))
+                            {
+                                passedDomain = domain;
                                 return MailAuthVerdictSPF.Pass;
+                            }
                         } break;
                     case "include":
                     case "+include":
                     case "?include":
-                        if (field.Value != null && CheckSPF(field.Value, ip, depth + 1, true) == MailAuthVerdictSPF.Pass)
+                        if (field.Value != null && CheckSPF(field.Value, ip, depth + 1, true, out passedDomain) == MailAuthVerdictSPF.Pass)
                             return MailAuthVerdictSPF.Pass;
                         break;
 
