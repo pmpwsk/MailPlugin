@@ -40,14 +40,8 @@ public partial class MailPlugin : Plugin
                     case "+a":
                     case "?a":
                         {
-                            if (field.Value != null && IPAddress.TryParse(field.Value, out var fieldIP))
-                            {
-                                var result = MatchAorAAAA(domain, fieldIP);
-                                if (result != null)
-                                {
-                                    return MailAuthVerdictSPF.Pass;
-                                }
-                            }
+                            if (field.Value != null && IPAddress.TryParse(field.Value, out var fieldIP) && MatchAorAAAA(domain, fieldIP))
+                                return MailAuthVerdictSPF.Pass;
                         } break;
                     case "mx":
                     case "+mx":
@@ -61,7 +55,7 @@ public partial class MailPlugin : Plugin
                                     if (ip.Equals(mxIP))
                                         return MailAuthVerdictSPF.Pass;
                                 }
-                                else if (MatchAorAAAA(mx.Exchange, ip) != null)
+                                else if (MatchAorAAAA(mx.Exchange, ip))
                                     return MailAuthVerdictSPF.Pass;
                         } break;
                     case "ip4":
@@ -91,12 +85,12 @@ public partial class MailPlugin : Plugin
         }
     }
 
-    private static IPAddress? MatchAorAAAA(string domain, IPAddress ip, int depth = 0)
+    private static bool MatchAorAAAA(string domain, IPAddress ip, int depth = 0)
     {
         try
         {
             if (depth >= 10)
-                return null;
+                return false;
 
             //a or aaaa
             switch (ip.AddressFamily)
@@ -106,14 +100,14 @@ public partial class MailPlugin : Plugin
                     var aRecords = aQuery.Answers.ARecords();
                     foreach (var a in aRecords)
                         if (ip.Equals(a.Address))
-                            return a.Address;
+                            return true;
                     break;
                 case AddressFamily.InterNetworkV6:
                     var aaaaQuery = MailManager.DnsLookup.Query(domain, DnsClient.QueryType.AAAA);
                     var aaaaRecords = aaaaQuery.Answers.AaaaRecords();
                     foreach (var aaaa in aaaaRecords)
                         if (ip.Equals(aaaa.Address))
-                            return aaaa.Address;
+                            return true;
                     break;
             }
 
@@ -121,17 +115,14 @@ public partial class MailPlugin : Plugin
             var cnameQuery = MailManager.DnsLookup.Query(domain, DnsClient.QueryType.CNAME);
             var cnameRecords = cnameQuery.Answers.CnameRecords();
             foreach (var cname in cnameRecords)
-            {
-                var result = MatchAorAAAA(cname.CanonicalName, ip, depth + 1);
-                if (result != null)
-                    return result;
-            }
+                if (MatchAorAAAA(cname.CanonicalName, ip, depth + 1))
+                    return true;
 
-            return null;
+            return false;
         }
         catch
         {
-            return null;
+            return false;
         }
     }
 }
