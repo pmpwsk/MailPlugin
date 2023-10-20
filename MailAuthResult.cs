@@ -32,8 +32,9 @@ public partial class MailPlugin : Plugin
             logToPopulate.Add("From: " + IPAddress);
             logToPopulate.Add("Secure: " + Secure.ToString());
 
-            SPF = MailAuthVerdictSPF.Unset;
-            logToPopulate.Add("SPF checking was skipped (501).");
+            SPF = CheckSPF(message.From.Mailboxes.First().Domain, connectionData.IP.Address, out var spfPassedDomain);
+            logToPopulate.Add($"SPF: {SPF}{(spfPassedDomain == null ? "" : $" with {spfPassedDomain}")}");
+
             DKIM = MailAuthVerdict.Unset;
             logToPopulate.Add("DKIM checking was skipped (501).");
             DMARC = MailAuthVerdict.Unset;
