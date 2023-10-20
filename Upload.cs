@@ -2,12 +2,12 @@
 
 public partial class MailPlugin : Plugin
 {
-    public override async Task Handle(UploadRequest req, string path, string pathPrefix)
+    public override Task Handle(UploadRequest req, string path, string pathPrefix)
     {
         if (req.User == null || (!req.LoggedIn))
         {
             req.Status = 403;
-            return;
+            return Task.CompletedTask;
         }
 
         switch (path)
@@ -39,5 +39,7 @@ public partial class MailPlugin : Plugin
                 req.Status = 404;
                 break;
         }
+
+        return Task.CompletedTask;
     }
 }
