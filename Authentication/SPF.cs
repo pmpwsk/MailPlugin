@@ -52,9 +52,10 @@ public partial class MailPlugin : Plugin
                     case "ip6":
                     case "+ip6":
                     case "?ip6":
-                        if (field.Value != null && IPAddress.TryParse(field.Value, out var fieldIP) && ip.Equals(fieldIP))
-                            return MailAuthVerdictSPF.Pass;
-                        break;
+                        {
+                            if (field.Value != null && IPAddress.TryParse(field.Value, out var fieldIP) && ip.Equals(fieldIP))
+                                return MailAuthVerdictSPF.Pass;
+                        } break;
                     case "include":
                     case "+include":
                     case "?include":
