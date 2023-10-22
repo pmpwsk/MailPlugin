@@ -79,6 +79,7 @@ public partial class MailPlugin : Plugin
                     {/////
                         //list folders in the mailbox (inbox, sent, recycle bin, spam are pinned)
                         page.Title = $"Mail ({mailbox.Address})";
+                        page.Head.Add("<meta http-equiv=\"refresh\" content=\"300\">");
                         page.Sidebar.Add(new ButtonElement("Mailboxes:", null, $"{pluginHome}"));
                         foreach (Mailbox m in (Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : new HashSet<Mailbox>())
                             .OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@')))
