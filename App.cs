@@ -81,10 +81,12 @@ public partial class MailPlugin : Plugin
                         page.Title = $"Mail ({mailbox.Address})";
                         page.Head.Add("<meta http-equiv=\"refresh\" content=\"300\">");
                         page.Sidebar.Add(new ButtonElement("Mailboxes:", null, $"{pluginHome}"));
+                        bool anyUnread = false;
                         foreach (Mailbox m in (Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : new HashSet<Mailbox>())
                             .OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@')))
                         {
                             bool unread = GetLastReversed(m.Folders["Inbox"], MessagePreloadCount, 0).Any(x => m.Messages.TryGetValue(x, out var message) && message.Unread);
+                            if (unread) anyUnread = true;
                             page.Sidebar.Add(new ButtonElement(null, (unread ? "(!) " : "") + m.Address, $"{pluginHome}?mailbox={m.Id}", unread ? "red" : null));
                         }
                         HighlightSidebar(page, req);
@@ -98,8 +100,11 @@ public partial class MailPlugin : Plugin
                         foreach (var folderItem in SortFolders(mailbox.Folders))
                         {
                             bool unread = GetLastReversed(folderItem.Value, MessagePreloadCount, 0).Any(x => mailbox.Messages.TryGetValue(x, out var message) && message.Unread);
+                            if (unread) anyUnread = true;
                             e.Add(new ButtonElement((unread ? "(!) " : "") + folderItem.Key, CountString(folderItem.Value.Count, "message"), $"{pluginHome}?mailbox={mailboxId}&folder={HttpUtility.UrlEncode(folderItem.Key)}", unread ? "red" : null));
                         }
+                        if (anyUnread)
+                            page.Favicon = pathPrefix + "/icon-red.ico";
                         break;
                     }
                     if (!mailbox.Folders.TryGetValue(folderName, out var folder))
