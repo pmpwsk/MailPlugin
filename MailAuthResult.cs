@@ -19,7 +19,7 @@ public partial class MailPlugin : Plugin
         public readonly MailAuthVerdictSPF SPF;
 
         [DataMember]
-        public readonly MailAuthVerdict DKIM;
+        public readonly MailAuthVerdictDKIM DKIM;
 
         [DataMember]
         public readonly MailAuthVerdict DMARC;
@@ -35,7 +35,7 @@ public partial class MailPlugin : Plugin
             SPF = CheckSPF(message.From.Mailboxes.First().Domain, connectionData.IP.Address, out var spfPassedDomain);
             logToPopulate.Add($"SPF: {SPF}{(spfPassedDomain == null ? "" : $" with {spfPassedDomain}")}");
 
-            DKIM = MailAuthVerdict.Unset;
+            DKIM = MailAuthVerdictDKIM.Unset;
             logToPopulate.Add("DKIM checking was skipped (501).");
             DMARC = MailAuthVerdict.Unset;
             logToPopulate.Add("DMARC checking was skipped (501).");
