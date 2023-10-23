@@ -14,7 +14,7 @@ public partial class MailPlugin : Plugin
         public MailAuthVerdictSPF SPF;
 
         [DataMember]
-        public MailAuthVerdict DKIM;
+        public MailAuthVerdictDKIM DKIM;
 
         [DataMember]
         public MailAuthVerdict DMARC;
@@ -23,7 +23,7 @@ public partial class MailPlugin : Plugin
         {
             Secure = true;
             SPF = MailAuthVerdictSPF.Unset;
-            DKIM = MailAuthVerdict.Unset;
+            DKIM = MailAuthVerdictDKIM.Unset;
             DMARC = MailAuthVerdict.Unset;
         }
 
