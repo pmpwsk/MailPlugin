@@ -7,11 +7,19 @@ public partial class MailPlugin : Plugin
 {
     private static MailAuthVerdictDKIM CheckDKIM(MimeMessage message, out Dictionary<string,bool> domainResults)
     {
-        domainResults = new();
-        var result = MailAuthVerdictDKIM.Unset;
+        try
+        {
+            domainResults = new();
+            var result = MailAuthVerdictDKIM.Unset;
 
 
 
-        return result;
+            return result;
+        }
+        catch
+        {
+            domainResults = new();
+            return MailAuthVerdictDKIM.Unset;
+        }
     }
 }
