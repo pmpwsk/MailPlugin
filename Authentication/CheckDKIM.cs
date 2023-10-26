@@ -31,7 +31,7 @@ public partial class MailPlugin : Plugin
                 {
                     if (domain == null)
                         continue;
-                    bool valid = Task.Run(async () => { return await verifier.VerifyAsync(message, header); }).GetAwaiter().GetResult();
+                    bool valid = verifier.Verify(message, header);
                     domainResults[domain] = valid;
                     switch (result)
                     {
