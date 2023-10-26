@@ -10,12 +10,12 @@ public partial class MailPlugin : Plugin
     {
         public override AsymmetricKeyParameter LocatePublicKey(string methods, string domain, string selector, CancellationToken cancellationToken = default)
         {
-            if (methods.Split(new char[] { ':' }).Contains("dns/txt"))
+            if (!methods.Split(new char[] { ':' }).Contains("dns/txt"))
                 throw new NotSupportedException("'methods' doesn't include \"dns/txt\".");
 
             var query = MailManager.DnsLookup.Query(selector + "._domainkey." + domain, DnsClient.QueryType.TXT);
             var records = query.Answers.TxtRecords();
-
+            
             return GetPublicKey(string.Join("", records.Select(x => string.Join("", x.Text))));
         }
 
