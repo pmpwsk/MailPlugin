@@ -5,7 +5,7 @@ namespace uwap.WebFramework.Plugins;
 
 public partial class MailPlugin : Plugin
 {
-    private static MailAuthVerdictDKIM CheckDKIM(MimeMessage message, out Dictionary<string,bool> domainResults)
+    private static MailAuthVerdictDKIM CheckDKIM(MimeMessage message, out Dictionary<DomainSelectorPair,bool> domainResults)
     {
         try
         {
@@ -16,11 +16,11 @@ public partial class MailPlugin : Plugin
 
             foreach (var header in message.Headers.Where(x => x.Id == HeaderId.DkimSignature))
             {
-                string? domain = null;
+                string? domain = null, selector = null;
                 try
                 {
                     var parameters = MimeKitCryptographyUser.ParseParameterTags(header.Id, header.Value);
-                    MimeKitCryptographyUser.ValidateDkimSignatureParameters(parameters, out _, out _, out _, out domain, out _, out _, out _, out _, out _, out _);
+                    MimeKitCryptographyUser.ValidateDkimSignatureParameters(parameters, out _, out _, out _, out domain, out selector, out _, out _, out _, out _, out _);
                 }
                 catch
                 {
@@ -29,10 +29,10 @@ public partial class MailPlugin : Plugin
 
                 try
                 {
-                    if (domain == null)
+                    if (domain == null || selector == null)
                         continue;
                     bool valid = verifier.Verify(message, header);
-                    domainResults[domain] = valid;
+                    domainResults[new(domain, selector)] = valid;
                     switch (result)
                     {
                         case MailAuthVerdictDKIM.Unset:
@@ -50,9 +50,9 @@ public partial class MailPlugin : Plugin
                 }
                 catch
                 {
-                    if (domain != null)
+                    if (domain != null && selector != null)
                     {
-                        domainResults[domain] = false;
+                        domainResults[new(domain, selector)] = false;
                         switch (result)
                         {
                             case MailAuthVerdictDKIM.Unset:
