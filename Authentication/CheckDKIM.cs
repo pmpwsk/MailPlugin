@@ -16,25 +16,53 @@ public partial class MailPlugin : Plugin
 
             foreach (var header in message.Headers.Where(x => x.Id == HeaderId.DkimSignature))
             {
-                var parameters = MimeKitCryptographyUser.ParseParameterTags(header.Id, header.Value);
-                MimeKitCryptographyUser.ValidateDkimSignatureParameters(parameters, out _, out _, out _, out string? domain, out _, out _, out _, out _, out _, out _);
-                if (domain == null)
-                    continue;
-                bool valid = verifier.Verify(message, header);
-                domainResults[domain] = valid;
-                switch (result)
+                string? domain = null;
+                try
                 {
-                    case MailAuthVerdictDKIM.Unset:
-                        result = valid ? MailAuthVerdictDKIM.Pass : MailAuthVerdictDKIM.Fail;
-                        break;
-                    case MailAuthVerdictDKIM.Pass:
-                        if (!valid)
-                            result = MailAuthVerdictDKIM.Mixed;
-                        break;
-                    case MailAuthVerdictDKIM.Fail:
-                        if (valid)
-                            result = MailAuthVerdictDKIM.Mixed;
-                        break;
+                    var parameters = MimeKitCryptographyUser.ParseParameterTags(header.Id, header.Value);
+                    MimeKitCryptographyUser.ValidateDkimSignatureParameters(parameters, out _, out _, out _, out domain, out _, out _, out _, out _, out _, out _);
+                }
+                catch
+                {
+                    continue;
+                }
+
+                try
+                {
+                    if (domain == null)
+                        continue;
+                    bool valid = Task.Run(async () => { return await verifier.VerifyAsync(message, header); }).GetAwaiter().GetResult();
+                    domainResults[domain] = valid;
+                    switch (result)
+                    {
+                        case MailAuthVerdictDKIM.Unset:
+                            result = valid ? MailAuthVerdictDKIM.Pass : MailAuthVerdictDKIM.Fail;
+                            break;
+                        case MailAuthVerdictDKIM.Pass:
+                            if (!valid)
+                                result = MailAuthVerdictDKIM.Mixed;
+                            break;
+                        case MailAuthVerdictDKIM.Fail:
+                            if (valid)
+                                result = MailAuthVerdictDKIM.Mixed;
+                            break;
+                    }
+                }
+                catch
+                {
+                    if (domain != null)
+                    {
+                        domainResults[domain] = false;
+                        switch (result)
+                        {
+                            case MailAuthVerdictDKIM.Unset:
+                                result = MailAuthVerdictDKIM.Fail;
+                                break;
+                            case MailAuthVerdictDKIM.Pass:
+                                result = MailAuthVerdictDKIM.Mixed;
+                                break;
+                        }
+                    }
                 }
             }
 
