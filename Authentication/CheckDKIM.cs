@@ -6,11 +6,11 @@ namespace uwap.WebFramework.Plugins;
 
 public partial class MailPlugin : Plugin
 {
-    private static MailAuthVerdictDKIM CheckDKIM(MimeMessage message, out Dictionary<DomainSelectorPair,bool> domainResults)
+    private static MailAuthVerdictDKIM CheckDKIM(MimeMessage message, out Dictionary<DomainSelectorPair,bool> individualResults)
     {
         try
         {
-            domainResults = new();
+            individualResults = new();
             var result = MailAuthVerdictDKIM.Unset;
 
             var verifier = new DkimVerifier(new DkimPublicKeyLocator());
@@ -23,7 +23,7 @@ public partial class MailPlugin : Plugin
                 try
                 {
                     bool valid = verifier.Verify(message, header);
-                    domainResults[new(domain, selector)] = valid;
+                    individualResults[new(domain, selector)] = valid;
                     switch (result)
                     {
                         case MailAuthVerdictDKIM.Unset:
@@ -43,7 +43,7 @@ public partial class MailPlugin : Plugin
                 {
                     if (domain != null && selector != null)
                     {
-                        domainResults[new(domain, selector)] = false;
+                        individualResults[new(domain, selector)] = false;
                         switch (result)
                         {
                             case MailAuthVerdictDKIM.Unset:
@@ -61,7 +61,7 @@ public partial class MailPlugin : Plugin
         }
         catch
         {
-            domainResults = new();
+            individualResults = new();
             return MailAuthVerdictDKIM.Unset;
         }
     }
