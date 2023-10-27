@@ -2,6 +2,46 @@
 
 public partial class MailPlugin : Plugin
 {
+    private static MailAuthVerdictDMARC CheckDMARC(string returnDomain, string fromDomain, MailAuthVerdictSPF spfVerdict, MailAuthVerdictDKIM dkimVerdict, Dictionary<DomainSelectorPair, bool> dkimResults)
+    {
+        try
+        {
+            //no record for DMARC settings
+            if (!GetDmarcSettings(returnDomain, false, out var p, out var aspf, out var adkim))
+                return MailAuthVerdictDMARC.Unset;
+
+            //SPF or DKIM didn't (fully) pass
+            if (spfVerdict != MailAuthVerdictSPF.Pass || dkimVerdict != MailAuthVerdictDKIM.Pass)
+                ToVerdict(p);
+
+            //SPF alignment wrong
+            if (aspf switch
+                {
+                    DmarcAlignment.Strict => returnDomain != fromDomain,
+                    DmarcAlignment.Relaxed => !DmarcRelaxedRelation(returnDomain, fromDomain),
+                    _ => throw new Exception("The given alignment wasn't recognized.")
+                })
+                ToVerdict(p);
+
+            //DKIM alignment wrong
+            var dkimDomains = dkimResults.Where(x => x.Value).Select(x => x.Key.Domain).Distinct();
+            if (adkim switch
+                {
+                    DmarcAlignment.Strict => dkimDomains.All(x => x != fromDomain),
+                    DmarcAlignment.Relaxed => dkimDomains.All(x => !DmarcRelaxedRelation(x, fromDomain)),
+                    _ => throw new Exception("The given alignment wasn't recognized.")
+                })
+                ToVerdict(p);
+
+            //nothing is wrong
+            return MailAuthVerdictDMARC.Pass;
+        }
+        catch
+        {
+            return MailAuthVerdictDMARC.Unset;
+        }
+    }
+
     private static bool GetDmarcSettings(string domain, bool preferSubdomain, out DmarcPolicy policy, out DmarcAlignment alignmentSPF, out DmarcAlignment alignmentDKIM)
     {
         var fields = ResolveTXT($"_dmarc.{domain}", null, new[] { new[] { "p" } });
