@@ -32,7 +32,11 @@ public partial class MailPlugin : Plugin
             logToPopulate.Add("From: " + IPAddress);
             logToPopulate.Add("Secure: " + Secure.ToString());
 
-            SPF = CheckSPF(message.From.Mailboxes.First().Domain, connectionData.IP.Address, out var spfPassedDomain);
+            string fromDomain = message.From.Mailboxes.First().Domain;
+            string? returnHeader = message.Headers[HeaderId.ReturnPath];
+            string returnDomain = (returnHeader != null && MailboxAddress.TryParse(returnHeader, out var address)) ? address.Domain : fromDomain;
+
+            SPF = CheckSPF(returnDomain, connectionData.IP.Address, out var spfPassedDomain);
             logToPopulate.Add($"SPF: {SPF}{(spfPassedDomain == null ? "" : $" with {spfPassedDomain}")}");
 
             DKIM = CheckDKIM(message, out var dkimResults);
