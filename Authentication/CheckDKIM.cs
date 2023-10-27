@@ -1,5 +1,6 @@
 ﻿using MimeKit;
 using MimeKit.Cryptography;
+using System.Diagnostics.CodeAnalysis;
 
 namespace uwap.WebFramework.Plugins;
 
@@ -16,21 +17,11 @@ public partial class MailPlugin : Plugin
 
             foreach (var header in message.Headers.Where(x => x.Id == HeaderId.DkimSignature))
             {
-                string? domain = null, selector = null;
-                try
-                {
-                    var parameters = MimeKitCryptographyUser.ParseParameterTags(header.Id, header.Value);
-                    MimeKitCryptographyUser.ValidateDkimSignatureParameters(parameters, out _, out _, out _, out domain, out selector, out _, out _, out _, out _, out _);
-                }
-                catch
-                {
+                if (!GetDomainAndSelector(header.Value, out string? domain, out string? selector))
                     continue;
-                }
 
                 try
                 {
-                    if (domain == null || selector == null)
-                        continue;
                     bool valid = verifier.Verify(message, header);
                     domainResults[new(domain, selector)] = valid;
                     switch (result)
@@ -73,5 +64,31 @@ public partial class MailPlugin : Plugin
             domainResults = new();
             return MailAuthVerdictDKIM.Unset;
         }
+    }
+
+    public static bool GetDomainAndSelector(string dkimSignature, [MaybeNullWhen(false)] out string domain, [MaybeNullWhen(false)] out string selector)
+    {
+        domain = null;
+        selector = null;
+        foreach (string item in dkimSignature.Split(';'))
+        {
+            if (item.SplitAtFirst('=', out string? k, out string? v))
+            {
+                string key = k.Trim();
+                string value = v.Trim();
+                switch(key)
+                {
+                    case "d":
+                        if (value != "")
+                            domain = value;
+                        break;
+                    case "s":
+                        if (selector != "")
+                            selector = value;
+                        break;
+                }
+            }
+        }
+        return domain != null && selector != null;
     }
 }
