@@ -73,4 +73,13 @@ public partial class MailPlugin : Plugin
         alignmentDKIM = DmarcAlignment.Relaxed;
         return false;
     }
+
+    private static MailAuthVerdictDMARC ToVerdict(DmarcPolicy policy)
+        => policy switch
+        {
+            DmarcPolicy.Quarantine => MailAuthVerdictDMARC.FailWithQuarantine,
+            DmarcPolicy.Reject => MailAuthVerdictDMARC.FailWithReject,
+            DmarcPolicy.None => MailAuthVerdictDMARC.FailWithoutAction,
+            _ => throw new Exception("The given policy wasn't recognized."),
+        };
 }
