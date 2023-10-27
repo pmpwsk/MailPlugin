@@ -17,14 +17,14 @@ public partial class MailPlugin : Plugin
         public MailAuthVerdictDKIM DKIM;
 
         [DataMember]
-        public MailAuthVerdict DMARC;
+        public MailAuthVerdictDMARC DMARC;
 
         public MailAuthRequirements()
         {
             Secure = true;
             SPF = MailAuthVerdictSPF.Unset;
             DKIM = MailAuthVerdictDKIM.Unset;
-            DMARC = MailAuthVerdict.Unset;
+            DMARC = MailAuthVerdictDMARC.Unset;
         }
 
         public bool SatisfiedBy(MailAuthResult result)
