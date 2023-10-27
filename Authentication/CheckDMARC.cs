@@ -82,4 +82,7 @@ public partial class MailPlugin : Plugin
             DmarcPolicy.None => MailAuthVerdictDMARC.FailWithoutAction,
             _ => throw new Exception("The given policy wasn't recognized."),
         };
+
+    private static bool DmarcRelaxedRelation(string domain1, string domain2)
+        => domain1 == domain2 || domain1.EndsWith($".{domain2}") || domain2.EndsWith($".{domain1}");
 }
