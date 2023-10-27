@@ -2,7 +2,7 @@
 
 public partial class MailPlugin : Plugin
 {
-    public enum MailAuthVerdict
+    public enum MailAuthVerdictDMARC
     {
         Fail = -1,
         Unset = 0,
