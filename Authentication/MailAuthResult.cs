@@ -44,8 +44,8 @@ public partial class MailPlugin : Plugin
             foreach (var ds in dkimResults)
                 logToPopulate.Add($"DKIM (domain={ds.Key.Domain}, selector={ds.Key.Selector}): {(ds.Value ? "Pass" : "Fail")}");
 
-            DMARC = MailAuthVerdictDMARC.Unset;
-            logToPopulate.Add("DMARC checking was skipped (501).");
+            DMARC = CheckDMARC(returnDomain, fromDomain, SPF, DKIM, dkimResults);
+            logToPopulate.Add($"DMARC: {DMARC}");
         }
     }
 }
