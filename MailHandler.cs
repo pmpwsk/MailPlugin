@@ -4,6 +4,7 @@ using SmtpServer.Mail;
 using SmtpServer.Protocol;
 using SmtpServer.Storage;
 using uwap.WebFramework.Mail;
+using static uwap.WebFramework.Mail.MailAuth;
 
 namespace uwap.WebFramework.Plugins;
 
@@ -31,7 +32,7 @@ public partial class MailPlugin : Plugin
         if (mailboxes.Any())
         {
             List<string> log = new();
-            MailAuthResult authResult = new(connectionData, message, log);
+            FullResult authResult = CheckEverything(connectionData, message, log);
             List<MailAttachment> attachments = message.Attachments.Select(x => new MailAttachment(x.ContentDisposition.FileName, x.ContentType.MimeType)).ToList();
             MailMessage mail = new(true, DateTime.UtcNow, message, attachments, authResult, log);
             foreach (string toAddress in mailboxes.Select(x => x.Address))
