@@ -1,4 +1,5 @@
 ﻿using System.Runtime.Serialization;
+using static uwap.WebFramework.Mail.MailAuth;
 
 namespace uwap.WebFramework.Plugins;
 
@@ -27,7 +28,7 @@ public partial class MailPlugin : Plugin
             DMARC = MailAuthVerdictDMARC.Unset;
         }
 
-        public bool SatisfiedBy(MailAuthResult result)
+        public bool SatisfiedBy(FullResult result)
             => (result.Secure || !Secure)
             && result.SPF >= SPF
             && result.DKIM >= DKIM
