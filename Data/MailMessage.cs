@@ -1,5 +1,6 @@
 ﻿using MimeKit;
 using System.Runtime.Serialization;
+using static uwap.WebFramework.Mail.MailAuth;
 
 namespace uwap.WebFramework.Plugins;
 
@@ -42,12 +43,12 @@ public partial class MailPlugin : Plugin
         public List<MailAttachment> Attachments;
 
         [DataMember]
-        public MailAuthResult? AuthResult;
+        public FullResult? AuthResult;
 
         [DataMember]
         public List<string> Log;
 
-        public MailMessage(bool unread, DateTime timestampUtc, MimeMessage message, List<MailAttachment> attachments, MailAuthResult authResult, List<string> log)
+        public MailMessage(bool unread, DateTime timestampUtc, MimeMessage message, List<MailAttachment> attachments, FullResult authResult, List<string> log)
         {
             Unread = unread;
             TimestampUtc = timestampUtc;
