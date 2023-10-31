@@ -60,6 +60,7 @@ public partial class MailPlugin : Plugin
                             }
                             if (mailboxes.Any())
                             {
+                                page.Scripts.Add(IncomingScript(req, mailboxes.Max(LastInboxMessageId), pathPrefix));
                                 bool anyUnread = false;
                                 foreach (Mailbox m in mailboxes)
                                 {
@@ -95,6 +96,7 @@ public partial class MailPlugin : Plugin
                     if (!req.Query.TryGetValue("folder", out var folderName))
                     {/////
                         //list folders in the mailbox (inbox, sent, recycle bin, spam are pinned)
+                        page.Scripts.Add(IncomingScript(req, LastInboxMessageId(mailbox), pathPrefix));
                         page.Title = $"Mail ({mailbox.Address})";
                         page.Head.Add("<meta http-equiv=\"refresh\" content=\"300\">");
                         page.Sidebar.Add(new ButtonElement("Mailboxes:", null, $"{pluginHome}"));
@@ -135,6 +137,7 @@ public partial class MailPlugin : Plugin
                     {/////
                         //list n messages (with offset) in the folder
                         page.Title = $"{folderName} ({mailbox.Address})";
+                        page.Scripts.Add(IncomingScript(req, LastInboxMessageId(mailbox), pathPrefix));
                         page.Sidebar.Add(new ButtonElement("Folders:", null, $"{pluginHome}?mailbox={mailboxId}"));
                         foreach (var folderItem in SortFolders(mailbox.Folders))
                         {
