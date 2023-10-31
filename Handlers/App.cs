@@ -6,6 +6,16 @@ namespace uwap.WebFramework.Plugins;
 
 public partial class MailPlugin : Plugin
 {
+    private IScript IncomingScript(AppRequest req, ulong last, string pathPrefix)
+    {
+        string query = req.Context.Request.QueryString.HasValue ? req.Context.Request.QueryString.Value ?? "" : "";
+        if (query == "")
+            query = "?";
+        else query += "&";
+        query += $"last={last}";
+        return new CustomScript($"let incomingEvent = new EventSource('/event{pathPrefix}/incoming{query}');\nonbeforeunload = (event) => {{ incomingEvent.close(); }};\n\nincomingEvent.onmessage = function (event) {{ switch (event.data) {{ case 'refresh': window.location.reload(); break; case 'icon': if (!document.querySelector(\"link[rel~='icon']\").href.includes('red')) {{ document.querySelector(\"link[rel~='icon']\").href = '{pathPrefix}/icon-red.ico'; }} break; }} }};");
+    }
+
     public override Task Handle(AppRequest req, string path, string pathPrefix)
     {
         Presets.CreatePage(req, "Mail", out Page page, out List<IPageElement> e);
