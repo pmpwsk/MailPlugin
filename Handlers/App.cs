@@ -6,6 +6,13 @@ namespace uwap.WebFramework.Plugins;
 
 public partial class MailPlugin : Plugin
 {
+    private ulong LastInboxMessageId(Mailbox mailbox)
+    {
+        if (mailbox.Folders.TryGetValue("Inbox", out var inbox) && inbox.Any())
+            return inbox.Max;
+        else return 0;
+    }
+
     private IScript IncomingScript(AppRequest req, ulong last, string pathPrefix)
     {
         string query = req.Context.Request.QueryString.HasValue ? req.Context.Request.QueryString.Value ?? "" : "";
