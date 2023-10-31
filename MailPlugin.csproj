@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="HtmlAgilityPack" Version="1.11.54" />
     <PackageReference Include="IPAddressRange" Version="6.0.0" />
     <PackageReference Include="Portable.BouncyCastle" Version="1.9.0">
 		<Aliases>PortableBouncyCastle</Aliases>
