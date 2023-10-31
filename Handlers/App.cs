@@ -139,11 +139,15 @@ public partial class MailPlugin : Plugin
                         page.Title = $"{folderName} ({mailbox.Address})";
                         page.Scripts.Add(IncomingScript(req, LastInboxMessageId(mailbox), pathPrefix));
                         page.Sidebar.Add(new ButtonElement("Folders:", null, $"{pluginHome}?mailbox={mailboxId}"));
+                        bool anyUnread = false;
                         foreach (var folderItem in SortFolders(mailbox.Folders))
                         {
                             bool unread = GetLastReversed(folderItem.Value, MessagePreloadCount, 0).Any(x => mailbox.Messages.TryGetValue(x, out var message) && message.Unread);
+                            if (unread) anyUnread = true;
                             page.Sidebar.Add(new ButtonElement(null, (unread ? "(!) " : "") + folderItem.Key, $"{pluginHome}?mailbox={mailboxId}&folder={HttpUtility.UrlEncode(folderItem.Key)}", unread ? "red" : null));
                         }
+                        if (anyUnread)
+                            page.Favicon = pathPrefix + "/icon-red.ico";
                         HighlightSidebar(page, req);
                         e.Add(new LargeContainerElement($"{folderName} ({mailbox.Address})", ""));
                         if (folder.Any())
