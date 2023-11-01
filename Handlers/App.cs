@@ -258,8 +258,15 @@ public partial class MailPlugin : Plugin
                                 break;
                             case "converted":
                                 if (File.Exists(messagePath + "html"))
-                                    e.Add(new ContainerElement("Converted HTML", ConvertHtml(File.ReadAllText(messagePath + "html")).ToList()));
-                                else e.Add(new ContainerElement("No HTML attached!", "", "red"));
+                                {
+                                    var c = ReadHTML(File.ReadAllText(messagePath + "html"));
+                                    if (c.Any())
+                                    {
+                                        e.Add(new ContainerElement("Converted HTML", c));
+                                        break;
+                                    }
+                                }
+                                e.Add(new ContainerElement("No HTML attached!", "", "red"));
                                 break;
                             case "html":
                                 if (File.Exists(messagePath + "html"))
