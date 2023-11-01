@@ -554,9 +554,4 @@ public partial class MailPlugin : Plugin
             if (element is ButtonElement button && button.Link == url)
                 button.Class = "green";
     }
-
-    private static IEnumerable<IContent> ConvertHtml(string html)
-    {
-        yield return new Paragraph("This view hasn't been implemented yet!");
-    }
 }
