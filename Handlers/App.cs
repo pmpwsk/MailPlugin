@@ -46,7 +46,6 @@ public partial class MailPlugin : Plugin
                     {/////
                         //list mailboxes that the user has access to or an error if none were found, redirect to mailbox if only one is present and user isn't admin
                         page.Title = "Mailboxes";
-                        page.Head.Add("<meta http-equiv=\"refresh\" content=\"300\">");
                         bool isAdmin = req.IsAdmin();
                         var mailboxes = (Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : new HashSet<Mailbox>())
                             .OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@'));
@@ -98,7 +97,6 @@ public partial class MailPlugin : Plugin
                         //list folders in the mailbox (inbox, sent, recycle bin, spam are pinned)
                         page.Scripts.Add(IncomingScript(req, LastInboxMessageId(mailbox), pathPrefix));
                         page.Title = $"Mail ({mailbox.Address})";
-                        page.Head.Add("<meta http-equiv=\"refresh\" content=\"300\">");
                         page.Sidebar.Add(new ButtonElement("Mailboxes:", null, $"{pluginHome}"));
                         bool anyUnread = false;
                         foreach (Mailbox m in (Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : new HashSet<Mailbox>())
