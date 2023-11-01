@@ -1,4 +1,5 @@
 ﻿using MimeKit;
+using Org.BouncyCastle.Ocsp;
 using SmtpServer;
 using SmtpServer.Mail;
 using SmtpServer.Protocol;
@@ -43,7 +44,8 @@ public partial class MailPlugin : Plugin
                 while (mailbox.Messages.ContainsKey(messageId))
                     messageId++;
                 mailbox.Messages[messageId] = mail;
-                mailbox.Folders[connectionData.Secure && mailbox.AuthRequirements.SatisfiedBy(authResult) ? "Inbox" : "Spam"].Add(messageId);
+                bool happy = connectionData.Secure && mailbox.AuthRequirements.SatisfiedBy(authResult);
+                mailbox.Folders[happy ? "Inbox" : "Spam"].Add(messageId);
                 mailbox.UnlockSave();
                 Directory.CreateDirectory($"../Mail/{mailbox.Id}/{messageId}");
                 if (message.TextBody != null)
@@ -60,6 +62,18 @@ public partial class MailPlugin : Plugin
                     stream.Dispose();
                     attachmentIndex++;
                 }
+                if (IncomingListeners.TryGetValue(mailbox, out var listenerKV))
+                    foreach (var listenerKKV in listenerKV)
+                        try
+                        {
+                            listenerKKV.Key.Send(listenerKKV.Value ? "refresh" : "icon").GetAwaiter().GetResult();
+                        }
+                        catch
+                        {
+                            foreach (var kv in IncomingListeners)
+                                if (kv.Value.Remove(listenerKKV.Key) && !kv.Value.Any())
+                                    IncomingListeners.Remove(kv.Key);
+                        }
             }
         }
         else if (PrintUnrecognizedToConsole)
