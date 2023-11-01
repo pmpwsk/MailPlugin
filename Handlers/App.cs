@@ -191,7 +191,7 @@ public partial class MailPlugin : Plugin
                             message.Unread = false;
                             mailbox.UnlockSave();
                         }
-                        string view = req.Query.TryGet("view") ?? "text";
+                        string view = req.Query.TryGet("view") ?? "converted";
                         switch (view)
                         {
                             case "text":
