@@ -305,8 +305,17 @@ public partial class MailPlugin : Plugin
                         foreach (var l in message.Log)
                             log.Add(new Paragraph(l));
                         e.Add(new ContainerElement("Log", log));
-                        if (File.Exists(messagePath + "html"))
-                            e.Add(new ButtonElement(null, "Load HTML (dangerous!)", $"{PathWithoutQueries(req, "offset", "view")}&view=load-html", newTab: true));
+
+                        List<string> views = new();
+                        if (hasText)
+                            views.Add($"<a href=\"{PathWithoutQueries(req, "view", "offset")}&view=text\" target=\"_blank\">Raw text</a>");
+                        if (hasHtml)
+                        {
+                            views.Add($"<a href=\"{PathWithoutQueries(req, "view", "offset")}&view=html\" target=\"_blank\">HTML code</a>");
+                            views.Add($"<a href=\"{PathWithoutQueries(req, "view", "offset")}&view=load-html\" target=\"_blank\">Load HTML (dangerous!)</a>");
+                        }
+                        if (views.Any())
+                            e.Add(new ContainerElement("View", new BulletList(views)));
                     }
                 } break;
             case "/send":
