@@ -263,38 +263,24 @@ public partial class MailPlugin : Plugin
                                 new Button("Move", $"{pathPrefix}/move?mailbox={mailbox.Id}&folder={folderName}&message={messageId}")
                             }});
                         Presets.AddError(page);
-                        e.Add(new ContainerElement(null, "View:") { Buttons = new()
+
+                        List<IContent>? text = null;
+                        if (hasHtml)
                         {
-                            new Button("Text", $"{PathWithoutQueries(req, "view", "offset")}&view=text{offsetQuery}", view == "text" ? "green" : null),
-                            new Button("Converted", $"{PathWithoutQueries(req, "view", "offset")}&view=converted{offsetQuery}", view == "converted" ? "green" : null),
-                            new Button("HTML", $"{PathWithoutQueries(req, "view", "offset")}&view=html{offsetQuery}", view == "html" ? "green" : null)
-                        }
-                        });
-                        switch (view)
-                        {
-                            case "text":
-                                if (File.Exists(messagePath + "text"))
-                                    e.Add(new ContainerElement("Text", File.ReadAllText(messagePath + "text").HtmlSafe().Replace("\n", "<br/>")));
-                                else e.Add(new ContainerElement("No text attached!", "", "red"));
-                                break;
-                            case "converted":
-                                if (File.Exists(messagePath + "html"))
-                                {
                                     var c = ReadHTML(File.ReadAllText(messagePath + "html"));
                                     if (c.Any())
-                                    {
-                                        e.Add(new ContainerElement("Converted HTML", c));
-                                        break;
-                                    }
-                                }
-                                e.Add(new ContainerElement("No HTML attached!", "", "red"));
-                                break;
-                            case "html":
-                                if (File.Exists(messagePath + "html"))
-                                    e.Add(new ContainerElement("HTML", File.ReadAllText(messagePath + "html").HtmlSafe().Replace("\n", "<br/>")));
-                                else e.Add(new ContainerElement("No HTML attached!", "", "red"));
-                                break;
+                                text = c;
                         }
+                        if (text == null && hasText)
+                                    {
+                            var c = File.ReadAllText(messagePath + "text").HtmlSafe().Replace("\r", "").Trim().Split('\n').Select(x => (IContent)new Paragraph(x)).ToList();
+                            if (c.Any())
+                                text = c;
+                                    }
+                        if (text == null || (text.Count == 1 && text.First() is Paragraph p && (p.Text == "" || p.Text == "<br/>")))
+                            e.Add(new ContainerElement("No text attached!", "", "red"));
+                        else e.Add(new ContainerElement("Message", text));
+
                         if (message.Attachments.Any())
                         {
                             e.Add(new ContainerElement("Attachments:"));
