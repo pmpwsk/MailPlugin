@@ -222,6 +222,10 @@ public partial class MailPlugin : Plugin
                             }
                                 return Task.CompletedTask;
                         }
+
+                        bool hasText = File.Exists(messagePath + "text");
+                        bool hasHtml = File.Exists(messagePath + "html");
+
                         page.Navigation.Add(new Button("Back", PathWithoutQueries(req, "message", "view", "offset"), "right"));
                         page.Title = $"{message.Subject} ({mailbox.Address})";
                         page.Scripts.Add(new Script(pathPrefix + "/query.js"));
