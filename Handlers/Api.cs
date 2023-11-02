@@ -244,7 +244,11 @@ public partial class MailPlugin : Plugin
                     mailbox.Lock();
                     message.TimestampUtc = DateTime.UtcNow;
                     message.From = new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address);
-                    MailGen msg = new(new(message.From.Name, message.From.Address), message.To.Select(x => new MailboxAddress(x.Name, x.Address)), message.Subject, text, null);
+                    string htmlPart = AddHTML(text);
+                    string textPart = RemoveHTML(htmlPart);
+                    File.WriteAllText($"../Mail/{mailbox.Id}/0/html", htmlPart);
+                    File.WriteAllText($"../Mail/{mailbox.Id}/0/text", textPart);
+                    MailGen msg = new(new(message.From.Name, message.From.Address), message.To.Select(x => new MailboxAddress(x.Name, x.Address)), message.Subject, textPart, htmlPart);
                     if (message.InReplyToId != null)
                         msg.IsReplyToMessageId = message.InReplyToId;
                     int counter = 0;
