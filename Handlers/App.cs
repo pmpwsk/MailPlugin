@@ -201,26 +201,26 @@ public partial class MailPlugin : Plugin
                         string messagePath = $"../Mail/{mailboxId}/{messageId}/";
                         if (req.Query.TryGetValue("view", out var view))
                         {
-                        switch (view)
-                        {
-                            case "text":
+                            switch (view)
+                            {
+                                case "text":
                                     {
                                         string code = File.Exists(messagePath + "text") ? File.ReadAllText(messagePath + "text").HtmlSafe().Replace("\n", "<br/>") : "No text attached!";
                                         req.Page = new RawHtmlCodePage(code);
                                     } break;
-                            case "html":
+                                case "html":
                                     {
                                         string code = File.Exists(messagePath + "html") ? File.ReadAllText(messagePath + "html").HtmlSafe().Replace("\n", "<br/>") : "No HTML attached!";
                                         req.Page = new RawHtmlCodePage(code);
                                     } break;
-                            case "load-html":
+                                case "load-html":
                                     req.Page = new RawHtmlFilePage($"../Mail/{mailboxId}/{messageId}/html");
                                     break;
-                            default:
-                                req.Status = 400;
+                                default:
+                                    req.Status = 400;
                                     break;
                             }
-                                return Task.CompletedTask;
+                            return Task.CompletedTask;
                         }
 
                         bool hasText = File.Exists(messagePath + "text");
@@ -267,16 +267,16 @@ public partial class MailPlugin : Plugin
                         List<IContent>? text = null;
                         if (hasHtml)
                         {
-                                    var c = ReadHTML(File.ReadAllText(messagePath + "html"));
-                                    if (c.Any())
+                            var c = ReadHTML(File.ReadAllText(messagePath + "html"));
+                            if (c.Any())
                                 text = c;
                         }
                         if (text == null && hasText)
-                                    {
+                        {
                             var c = File.ReadAllText(messagePath + "text").HtmlSafe().Replace("\r", "").Trim().Split('\n').Select(x => (IContent)new Paragraph(x)).ToList();
                             if (c.Any())
                                 text = c;
-                                    }
+                        }
                         if (text == null || (text.Count == 1 && text.First() is Paragraph p && (p.Text == "" || p.Text == "<br/>")))
                             e.Add(new ContainerElement("No text attached!", "", "red"));
                         else e.Add(new ContainerElement("Message", text));
