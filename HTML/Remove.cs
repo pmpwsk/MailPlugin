@@ -78,13 +78,7 @@ public partial class MailPlugin : Plugin
             case "b":
                 //inline formatting
                 foreach (var c in RemoveHTMLChildren(node.ChildNodes, false))
-                    if (c is Paragraph p)
-                    {
-                        if (p.Text != "<br/>")
-                            p.Text = $"<{node.Name}>{p.Text}</{node.Name}>";
-                        yield return p;
-                    }
-                    else yield return c;
+                    yield return c;
                 break;
             case "a":
                 { //link
@@ -98,9 +92,9 @@ public partial class MailPlugin : Plugin
                     else
                     {
                         if (inner == "")
-                            inner = "[link without text]";
+                            inner = "link without text";
                         if (IsFullHttpUrl(href, out var description) || (href.SplitAtFirst(':', out description, out _) && description != "javascript"))
-                            yield return new Paragraph($"<a href=\"{href}\" target=\"_blank\">{inner.HtmlSafe()} ({description})</a>");
+                            yield return new Paragraph($"[{inner.HtmlSafe()}]({href})");
                     }
                 }
                 break;
@@ -133,53 +127,14 @@ public partial class MailPlugin : Plugin
                     else if (IsFullHttpUrl(src, out var domain))
                     {
                         yield return null;
-                        yield return new Paragraph($"<a href=\"{src}\" target=\"_blank\">[external image on {domain} (dangerous!)]</a>");
+                        yield return new Paragraph($"[external image]({src})");
                         yield return null;
                     }
                     else if (src.StartsWith("data:image/"))
                     {
-                        string defMaxHeight = "5rem";
-                        string defMaxWidth = "calc(100% - 0.05rem)";
-                        string? height = null;
-                        string? width = null;
-                        string? maxHeight = null;
-                        string? maxWidth = null;
-                        foreach (var attribute in node.GetAttributeValue("style", "").Split(';').Select(x => x.Trim().ToLower()).Where(x => x != ""))
-                        {
-                            if (!attribute.SplitAtFirst(':', out var key, out var value))
-                                continue;
-                            key = key.TrimEnd();
-                            value = value.TrimStart();
-                            string? unit = null;
-                            if (!new[] { "height", "width", "max-height", "max-width" }.Contains(key))
-                                continue;
-                            foreach (var u in new[] { "cm", "mm", "in", "px", "pt", "pc", "rem", "em", "ex", "ch", "vw", "vh", "vmin", "vmax", "%" })
-                                if (value.EndsWith(u))
-                                {
-                                    unit = u;
-                                    value = value[..^u.Length];
-                                    break;
-                                }
-                            if (!double.TryParse(value, out var valueWithoutUnit))
-                                continue;
-                            unit ??= "px";
-                            switch (key)
-                            {
-                                case "height":
-                                    height = $"height:{valueWithoutUnit}{unit}";
-                                    break;
-                                case "width":
-                                    width = $"width:min({defMaxWidth},{valueWithoutUnit}{unit})";
-                                    break;
-                                case "max-height":
-                                    maxHeight = $"max-height:{valueWithoutUnit}{unit}";
-                                    break;
-                                case "max-width":
-                                    maxWidth = $"max-width:min({defMaxWidth},{valueWithoutUnit}{unit})";
-                                    break;
-                            }
-                        }
-                        yield return new Image(src, $"{height ?? maxHeight ?? $"max-height:{defMaxHeight}"};{width ?? maxWidth ?? $"max-width:{defMaxWidth}"}");
+                        yield return null;
+                        yield return new Paragraph("[image]");
+                        yield return null;
                     }
                 }
                 break;
