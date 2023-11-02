@@ -37,6 +37,7 @@ public partial class MailPlugin : Plugin
 
         page.Favicon = pathPrefix + "/icon.ico";
         page.Head.Add($"<link rel=\"manifest\" href=\"{pathPrefix}/manifest.json\" />");
+        page.Navigation = new() { page.Navigation.FirstOrDefault() ?? new Button(req.Domain, "/"), new Button("Mail", pluginHome) };
         switch (path)
         {
             case "":
@@ -45,6 +46,7 @@ public partial class MailPlugin : Plugin
                     if (!req.Query.TryGetValue("mailbox", out string? mailboxId))
                     {/////
                         //list mailboxes that the user has access to or an error if none were found, redirect to mailbox if only one is present and user isn't admin
+                        page.Navigation.Add(new Button("Back", "/", "right"));
                         page.Title = "Mailboxes";
                         bool isAdmin = req.IsAdmin();
                         var mailboxes = (Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : new HashSet<Mailbox>())
@@ -82,12 +84,14 @@ public partial class MailPlugin : Plugin
                     if (!Mailboxes.TryGetValue(mailboxId, out Mailbox? mailbox))
                     {
                         //mailbox doesn't exist
+                        page.Navigation.Add(new Button("Back", pluginHome, "right"));
                         e.Add(new LargeContainerElement("Error", "This mailbox doesn't exist!", "red"));
                         break;
                     }
                     if ((!mailbox.AllowedUserIds.TryGetValue(req.UserTable.Name, out var allowedUserIds)) || !allowedUserIds.Contains(req.User.Id))
                     {
                         //user doesn't have access to this mailbox
+                        page.Navigation.Add(new Button("Back", pluginHome, "right"));
                         e.Add(new LargeContainerElement("Error", "You don't have access to this mailbox!", "red"));
                         break;
                     }
@@ -95,6 +99,7 @@ public partial class MailPlugin : Plugin
                     if (!req.Query.TryGetValue("folder", out var folderName))
                     {/////
                         //list folders in the mailbox (inbox, sent, recycle bin, spam are pinned)
+                        page.Navigation.Add(new Button("Back", mailboxes.Count == 1 && !req.IsAdmin() ? "/" : pluginHome, "right"));
                         page.Scripts.Add(IncomingScript(req, LastInboxMessageId(mailbox), pathPrefix));
                         page.Title = $"Mail ({mailbox.Address})";
                         page.Sidebar.Add(new ButtonElement("Mailboxes:", null, $"{pluginHome}"));
@@ -127,6 +132,7 @@ public partial class MailPlugin : Plugin
                     if (!mailbox.Folders.TryGetValue(folderName, out var folder))
                     {
                         //folder doesn't exist
+                        page.Navigation.Add(new Button("Back", pluginHome, "right"));
                         e.Add(new LargeContainerElement("Error", "This folder doesn't exist!", "red"));
                         break;
                     }
@@ -134,6 +140,7 @@ public partial class MailPlugin : Plugin
                     if (!req.Query.TryGetValue("message", out var messageIdString))
                     {/////
                         //list n messages (with offset) in the folder
+                        page.Navigation.Add(new Button("Back", $"{pluginHome}?mailbox={mailboxId}", "right"));
                         page.Title = $"{folderName} ({mailbox.Address})";
                         page.Scripts.Add(IncomingScript(req, LastInboxMessageId(mailbox), pathPrefix));
                         page.Sidebar.Add(new ButtonElement("Folders:", null, $"{pluginHome}?mailbox={mailboxId}"));
@@ -171,6 +178,7 @@ public partial class MailPlugin : Plugin
                     if ((!ulong.TryParse(messageIdString, out ulong messageId)) || messageId == 0 || !mailbox.Messages.TryGetValue(messageId, out var message))
                     {
                         //message id isn't valid or doesn't exist
+                        page.Navigation.Add(new Button("Back", pluginHome, "right"));
                         e.Add(new LargeContainerElement("Error", "This message doesn't exist!", "red"));
                         break;
                     }
@@ -203,6 +211,7 @@ public partial class MailPlugin : Plugin
                                 req.Status = 400;
                                 return Task.CompletedTask;
                         }
+                        page.Navigation.Add(new Button("Back", PathWithoutQueries(req, "message", "view", "offset"), "right"));
                         page.Title = $"{message.Subject} ({mailbox.Address})";
                         page.Scripts.Add(new Script(pathPrefix + "/query.js"));
                         page.Scripts.Add(new Script(pathPrefix + "/message.js"));
@@ -319,6 +328,7 @@ public partial class MailPlugin : Plugin
                         message = null;
                         to = null; subject = null; text = null;
                     }
+                    page.Navigation.Add(new Button("Back", $"{pluginHome}?mailbox={mailbox.Id}", "right"));
                     page.Title = (message == null || message.InReplyToId == null) ? "Send an email" : "Reply";
                     page.HideFooter = true;
                     page.Scripts.Add(new Script(pathPrefix + "/query.js"));
@@ -368,6 +378,7 @@ public partial class MailPlugin : Plugin
                 {
                     if (InvalidMailbox(req, out var mailbox, e))
                         break;
+                    page.Navigation.Add(new Button("Back", $"{pluginHome}?mailbox={mailbox.Id}", "right"));
                     page.Title = "Send an email";
                     page.Scripts.Add(new Script(pathPrefix + "/query.js"));
                     page.Scripts.Add(new Script(pathPrefix + "/send-attachments.js"));
@@ -406,6 +417,7 @@ public partial class MailPlugin : Plugin
                         req.Status = 400;
                         break;
                     }
+                    page.Navigation.Add(new Button("Back", $"{pluginHome}?mailbox={mailbox.Id}&folder={folderName}&message={messageId}", "right"));
                     page.Title = "Move";
                     page.Scripts.Add(new Script(pathPrefix + "/query.js"));
                     page.Scripts.Add(new Script(pathPrefix + "/move.js"));
@@ -424,6 +436,7 @@ public partial class MailPlugin : Plugin
                 {
                     if (InvalidMailbox(req, out var mailbox, e))
                         break;
+                    page.Navigation.Add(new Button("Back", $"{pluginHome}?mailbox={mailbox.Id}", "right"));
                     page.Title = "Mail settings";
                     page.Scripts.Add(new Script(pathPrefix + "/query.js"));
                     page.Scripts.Add(new Script(pathPrefix + "/settings.js"));
@@ -442,6 +455,7 @@ public partial class MailPlugin : Plugin
                 {
                     if (InvalidMailbox(req, out var mailbox, e))
                         break;
+                    page.Navigation.Add(new Button("Back", $"{pathPrefix}/settings?mailbox={mailbox.Id}", "right"));
                     page.Title = "Mail folders";
                     page.Scripts.Add(new Script(pathPrefix + "/query.js"));
                     page.Scripts.Add(new Script(pathPrefix + "/settings-folders.js"));
@@ -479,6 +493,7 @@ public partial class MailPlugin : Plugin
                             break;
                         }
                         //manage mailbox
+                        page.Navigation.Add(new Button("Back", $"{pathPrefix}/manage", "right"));
                         page.Title = "Manage " + mailbox.Address;
                         page.Scripts.Add(new Script(pathPrefix + "/query.js"));
                         page.Scripts.Add(new Script(pathPrefix + "/manage-mailbox.js"));
@@ -510,6 +525,7 @@ public partial class MailPlugin : Plugin
                     else
                     {
                         //list mailboxes to manage them, and offer to create a new one
+                        page.Navigation.Add(new Button("Back", pluginHome, "right"));
                         page.Title = "Manage mailboxes";
                         page.Scripts.Add(new Script(pathPrefix + "/manage.js"));
                         e.Add(new LargeContainerElement("Manage mailboxes", ""));
