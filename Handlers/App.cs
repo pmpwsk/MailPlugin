@@ -198,18 +198,28 @@ public partial class MailPlugin : Plugin
                             message.Unread = false;
                             mailbox.UnlockSave();
                         }
-                        string view = req.Query.TryGet("view") ?? "converted";
+                        string messagePath = $"../Mail/{mailboxId}/{messageId}/";
+                        if (req.Query.TryGetValue("view", out var view))
+                        {
                         switch (view)
                         {
                             case "text":
-                            case "converted":
+                                    {
+                                        string code = File.Exists(messagePath + "text") ? File.ReadAllText(messagePath + "text").HtmlSafe().Replace("\n", "<br/>") : "No text attached!";
+                                        req.Page = new RawHtmlCodePage(code);
+                                    } break;
                             case "html":
-                                break;
+                                    {
+                                        string code = File.Exists(messagePath + "html") ? File.ReadAllText(messagePath + "html").HtmlSafe().Replace("\n", "<br/>") : "No HTML attached!";
+                                        req.Page = new RawHtmlCodePage(code);
+                                    } break;
                             case "load-html":
                                     req.Page = new RawHtmlFilePage($"../Mail/{mailboxId}/{messageId}/html");
                                     break;
                             default:
                                 req.Status = 400;
+                                    break;
+                            }
                                 return Task.CompletedTask;
                         }
                         page.Navigation.Add(new Button("Back", PathWithoutQueries(req, "message", "view", "offset"), "right"));
@@ -256,7 +266,6 @@ public partial class MailPlugin : Plugin
                             new Button("HTML", $"{PathWithoutQueries(req, "view", "offset")}&view=html{offsetQuery}", view == "html" ? "green" : null)
                         }
                         });
-                        string messagePath = $"../Mail/{mailboxId}/{messageId}/";
                         switch (view)
                         {
                             case "text":
