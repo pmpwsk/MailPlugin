@@ -264,19 +264,12 @@ public partial class MailPlugin : Plugin
                             }});
                         Presets.AddError(page);
 
-                        List<IContent>? textContents = null;
+                        string? c = null;
                         if (hasHtml)
-                        {
-                            var c = ReadHTML(File.ReadAllText(messagePath + "html"));
-                            if (c.Any())
-                                textContents = c;
-                        }
-                        if (textContents == null && hasText)
-                        {
-                            var c = File.ReadAllText(messagePath + "text").HtmlSafe().Replace("\r", "").Trim().Split('\n').Select(x => (IContent)new Paragraph(x)).ToList();
-                            if (c.Any())
-                                textContents = c;
-                        }
+                            c = File.ReadAllText(messagePath + "html");
+                        if (c == null && hasText)
+                            c = AddHTML(File.ReadAllText(messagePath + "text").HtmlSafe());
+                        List<IContent>? textContents = c == null ? null : ReadHTML(c);
                         if (textContents == null || (textContents.Count == 1 && textContents.First() is Paragraph p && (p.Text == "" || p.Text == "<br/>")))
                             e.Add(new ContainerElement("No text attached!", "", "red"));
                         else e.Add(new ContainerElement("Message", textContents));
