@@ -205,7 +205,7 @@ public partial class MailPlugin : Plugin
                             {
                                 case "text":
                                     {
-                                        string code = File.Exists(messagePath + "text") ? RemoveHTML(File.ReadAllText(messagePath + "text")).HtmlSafe().Replace("\n", "<br/>") : "No text attached!";
+                                        string code = File.Exists(messagePath + "text") ? File.ReadAllText(messagePath + "text").HtmlSafe().Replace("\n", "<br/>") : "No text attached!";
                                         req.Page = new RawHtmlCodePage(code);
                                     } break;
                                 case "html":

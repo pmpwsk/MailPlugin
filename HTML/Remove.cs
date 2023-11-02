@@ -29,7 +29,7 @@ public partial class MailPlugin : Plugin
             }
             else if (c is OrderedList ol)
             {
-                int i = 1;
+                int i = 0;
                 foreach (var item in ol.List)
                 {
                     result.Add(i + ". " + item);
