@@ -244,7 +244,7 @@ public partial class MailPlugin : Plugin
                     mailbox.Lock();
                     message.TimestampUtc = DateTime.UtcNow;
                     message.From = new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address);
-                    MailGen msg = new(new(message.From.Name, message.From.Address), message.To.Select(x => new MailboxAddress(x.Name, x.Address)), message.Subject, text, null);
+                    MailGen msg = new(new(message.From.Name, message.From.Address), message.To.Select(x => new MailboxAddress(x.Name, x.Address)), message.Subject, RemoveHTML(text), AddHTML(text));
                     if (message.InReplyToId != null)
                         msg.IsReplyToMessageId = message.InReplyToId;
                     int counter = 0;
