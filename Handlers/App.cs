@@ -99,13 +99,14 @@ public partial class MailPlugin : Plugin
                     if (!req.Query.TryGetValue("folder", out var folderName))
                     {/////
                         //list folders in the mailbox (inbox, sent, recycle bin, spam are pinned)
+                        var mailboxes = (Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : new HashSet<Mailbox>())
+                            .OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@')).ToList();
                         page.Navigation.Add(new Button("Back", mailboxes.Count == 1 && !req.IsAdmin() ? "/" : pluginHome, "right"));
                         page.Scripts.Add(IncomingScript(req, LastInboxMessageId(mailbox), pathPrefix));
                         page.Title = $"Mail ({mailbox.Address})";
                         page.Sidebar.Add(new ButtonElement("Mailboxes:", null, $"{pluginHome}"));
                         bool anyUnread = false;
-                        foreach (Mailbox m in (Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : new HashSet<Mailbox>())
-                            .OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@')))
+                        foreach (Mailbox m in mailboxes)
                         {
                             bool unread = GetLastReversed(m.Folders["Inbox"], MessagePreloadCount, 0).Any(x => m.Messages.TryGetValue(x, out var message) && message.Unread);
                             if (unread) anyUnread = true;
