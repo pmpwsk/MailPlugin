@@ -243,18 +243,18 @@ public partial class MailPlugin : Plugin
                         if (offset + MessagePreloadCount < folder.Count)
                             page.Sidebar.Add(new ButtonElement(null, "Older messages", $"{PathWithoutQueries(req, "offset")}&offset={offset + MessagePreloadCount}"));
                         HighlightSidebar(page, req, "view");
-                        List<IContent> contents = new();
+                        List<IContent> headingContents = new();
                         if (message.InReplyToId != null)
-                            contents.Add(new Paragraph($"This is a reply to another email (<a href=\"javascript:\" onclick=\"FindOriginal('{HttpUtility.UrlEncode(message.InReplyToId)}')\">find</a>)."));
-                        contents.Add(new Paragraph(DateTimeString(AdjustDateTime(req, message.TimestampUtc))));
-                        contents.Add(new Paragraph("From: " + message.From.FullString));
+                            headingContents.Add(new Paragraph($"This is a reply to another email (<a href=\"javascript:\" onclick=\"FindOriginal('{HttpUtility.UrlEncode(message.InReplyToId)}')\">find</a>)."));
+                        headingContents.Add(new Paragraph(DateTimeString(AdjustDateTime(req, message.TimestampUtc))));
+                        headingContents.Add(new Paragraph("From: " + message.From.FullString));
                         foreach (var to in message.To)
-                            contents.Add(new Paragraph("To: " + to.FullString));
+                            headingContents.Add(new Paragraph("To: " + to.FullString));
                         foreach (var cc in message.Cc)
-                            contents.Add(new Paragraph("CC: " + cc.FullString));
+                            headingContents.Add(new Paragraph("CC: " + cc.FullString));
                         foreach (var bcc in message.Bcc)
-                            contents.Add(new Paragraph("BCC: " + bcc.FullString));
-                        e.Add(new LargeContainerElement($"{message.Subject}", contents) { Button = new ButtonJS("Delete", "Delete()", "red", id: "deleteButton") });
+                            headingContents.Add(new Paragraph("BCC: " + bcc.FullString));
+                        e.Add(new LargeContainerElement($"{message.Subject}", headingContents) { Button = new ButtonJS("Delete", "Delete()", "red", id: "deleteButton") });
                         if (folderName != "Sent")
                             e.Add(new ContainerElement(null, "Actions:") { Buttons = new()
                             {
@@ -264,22 +264,22 @@ public partial class MailPlugin : Plugin
                             }});
                         Presets.AddError(page);
 
-                        List<IContent>? text = null;
+                        List<IContent>? textContents = null;
                         if (hasHtml)
                         {
                             var c = ReadHTML(File.ReadAllText(messagePath + "html"));
                             if (c.Any())
-                                text = c;
+                                textContents = c;
                         }
-                        if (text == null && hasText)
+                        if (textContents == null && hasText)
                         {
                             var c = File.ReadAllText(messagePath + "text").HtmlSafe().Replace("\r", "").Trim().Split('\n').Select(x => (IContent)new Paragraph(x)).ToList();
                             if (c.Any())
-                                text = c;
+                                textContents = c;
                         }
-                        if (text == null || (text.Count == 1 && text.First() is Paragraph p && (p.Text == "" || p.Text == "<br/>")))
+                        if (textContents == null || (textContents.Count == 1 && textContents.First() is Paragraph p && (p.Text == "" || p.Text == "<br/>")))
                             e.Add(new ContainerElement("No text attached!", "", "red"));
-                        else e.Add(new ContainerElement("Message", text));
+                        else e.Add(new ContainerElement("Message", textContents));
 
                         if (message.Attachments.Any())
                         {
