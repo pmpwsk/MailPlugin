@@ -231,7 +231,7 @@ public partial class MailPlugin : Plugin
                         yield return null;
                         buffer = null;
                     }
-                    else yield return c;
+                    yield return c;
                 }
         }
 
