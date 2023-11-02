@@ -2,11 +2,11 @@
 
 public partial class MailPlugin : Plugin
 {
-    private class RawHtmlPage : IPage
+    private class RawHtmlFilePage : IPage
     {
         private readonly string FilePath;
 
-        public RawHtmlPage(string filePath)
+        public RawHtmlFilePage(string filePath)
         {
             FilePath = filePath;
         }

@@ -197,8 +197,8 @@ public partial class MailPlugin : Plugin
                             case "html":
                                 break;
                             case "load-html":
-                                req.Page = new RawHtmlPage($"../Mail/{mailboxId}/{messageId}/html");
-                                return Task.CompletedTask;
+                                    req.Page = new RawHtmlFilePage($"../Mail/{mailboxId}/{messageId}/html");
+                                    break;
                             default:
                                 req.Status = 400;
                                 return Task.CompletedTask;
