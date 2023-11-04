@@ -256,7 +256,7 @@ public partial class MailPlugin : Plugin
                             headingContents.Add(new Paragraph("BCC: " + bcc.FullString));
                         e.Add(new LargeContainerElement($"{message.Subject}", headingContents) { Button = new ButtonJS("Delete", "Delete()", "red", id: "deleteButton") });
                         if (folderName != "Sent")
-                            e.Add(new ContainerElement(null, "Actions:") { Buttons = new()
+                            e.Add(new ContainerElement(null, "Do:") { Buttons = new()
                             {
                                 new ButtonJS("Reply", "Reply()"),
                                 new ButtonJS("Unread", "Unread()"),
