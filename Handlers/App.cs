@@ -260,6 +260,7 @@ public partial class MailPlugin : Plugin
                             {
                                 new ButtonJS("Reply", "Reply()"),
                                 new ButtonJS("Unread", "Unread()"),
+                                new Button("Forward", $"{pathPrefix}/forward?mailbox={mailbox.Id}&folder={folderName}&message={messageId}"),
                                 new Button("Move", $"{pathPrefix}/move?mailbox={mailbox.Id}&folder={folderName}&message={messageId}")
                             }});
                         Presets.AddError(page);
