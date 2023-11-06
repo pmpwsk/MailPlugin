@@ -8,17 +8,20 @@ public partial class MailPlugin : Plugin
     private readonly MailboxTable Mailboxes = MailboxTable.Import("Mail");
 
     /// <summary>
-    /// The amount of messages to be listed at a time, and to be checked to determine if a mailbox/folder has unread messages.
+    /// The amount of messages to be listed at a time, and to be checked to determine if a mailbox/folder has unread messages.<br/>
+    /// Default: 25
     /// </summary>
     public ushort MessagePreloadCount = 25;
 
     /// <summary>
-    /// Whether to print incoming mail messages to the console if no matching mailbox was found for them.
+    /// Whether to print incoming mail messages to the console if no matching mailbox was found for them.<br/>
+    /// Default: true
     /// </summary>
     public bool PrintUnrecognizedToConsole = true;
 
     /// <summary>
-    /// Whether to attempt to send emails to recipients that aren't present in the database, but have a domain that is present in it, externally.
+    /// Whether to attempt to send emails to recipients that aren't present in the database, but have a domain that is present in it, externally.<br/>
+    /// Default: false
     /// </summary>
     public bool SendMissingInternalRecipientsExternally = false;
 
