@@ -17,6 +17,11 @@ public partial class MailPlugin : Plugin
     /// </summary>
     public bool PrintUnrecognizedToConsole = true;
 
+    /// <summary>
+    /// Whether to attempt to send emails to recipients that aren't present in the database, but have a domain that is present in it, externally.
+    /// </summary>
+    public bool SendMissingInternalRecipientsExternally = false;
+
     private static IEnumerable<ulong> GetLastReversed(IEnumerable<ulong> source, int count, int offset)
     {
         int n = source.Count() - count - offset;
