@@ -7,6 +7,9 @@ public partial class MailPlugin : Plugin
 {
     private readonly MailboxTable Mailboxes = MailboxTable.Import("Mail");
 
+    /// <summary>
+    /// The amount of messages to be listed at a time, and to be checked to determine if a mailbox/folder has unread messages.
+    /// </summary>
     public ushort MessagePreloadCount = 25;
 
     public bool PrintUnrecognizedToConsole = true;
