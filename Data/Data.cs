@@ -12,6 +12,9 @@ public partial class MailPlugin : Plugin
     /// </summary>
     public ushort MessagePreloadCount = 25;
 
+    /// <summary>
+    /// Whether to print incoming mail messages to the console if no matching mailbox was found for them.
+    /// </summary>
     public bool PrintUnrecognizedToConsole = true;
 
     private static IEnumerable<ulong> GetLastReversed(IEnumerable<ulong> source, int count, int offset)
