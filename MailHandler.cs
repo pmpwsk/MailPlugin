@@ -4,6 +4,7 @@ using SmtpServer;
 using SmtpServer.Mail;
 using SmtpServer.Protocol;
 using SmtpServer.Storage;
+using System.Diagnostics.CodeAnalysis;
 using uwap.WebFramework.Mail;
 using static uwap.WebFramework.Mail.MailAuth;
 
@@ -11,6 +12,56 @@ namespace uwap.WebFramework.Plugins;
 
 public partial class MailPlugin : Plugin
 {
+    private bool BeforeSend(MailGen mailGen, MailboxAddress currentRecipient, string potentialMessageId, [MaybeNullWhen(true)] out string log)
+    {
+        if (!Mailboxes.MailboxByAddress.TryGetValue(currentRecipient.Address, out var mailbox))
+        {
+            if (SendMissingInternalRecipientsExternally || !Mailboxes.MailboxByAddress.Keys.Any(x => x.EndsWith('@' + currentRecipient.Domain)))
+            {
+                log = null;
+                return true;
+            }
+            else
+            {
+                log = "Address not found.";
+                return false;
+            }    
+        }
+
+        mailbox.Lock();
+        ulong messageId = (ulong)DateTime.UtcNow.Ticks;
+        while (mailbox.Messages.ContainsKey(messageId))
+            messageId++;
+        mailbox.Messages[messageId] = new(true, DateTime.UtcNow, mailGen, potentialMessageId);
+        mailbox.Folders["Inbox"].Add(messageId);
+        mailbox.UnlockSave();
+        Directory.CreateDirectory($"../Mail/{mailbox.Id}/{messageId}");
+        if (mailGen.TextBody != null)
+            File.WriteAllText($"../Mail/{mailbox.Id}/{messageId}/text", mailGen.TextBody);
+        if (mailGen.HtmlBody != null)
+            File.WriteAllText($"../Mail/{mailbox.Id}/{messageId}/html", mailGen.HtmlBody);
+        int attachmentIndex = 0;
+        foreach (var attachment in mailGen.Attachments)
+        {
+            File.WriteAllBytes($"../Mail/{mailbox.Id}/{messageId}/{attachmentIndex}", attachment.Bytes);
+            attachmentIndex++;
+        }
+        if (IncomingListeners.TryGetValue(mailbox, out var listenerKV))
+            foreach (var listenerKKV in listenerKV)
+                try
+                {
+                    listenerKKV.Key.Send(listenerKKV.Value ? "refresh" : "icon").GetAwaiter().GetResult();
+                }
+                catch
+                {
+                    foreach (var kv in IncomingListeners)
+                        if (kv.Value.Remove(listenerKKV.Key) && !kv.Value.Any())
+                            IncomingListeners.Remove(kv.Key);
+                }
+        log = "Sent internally.";
+        return false;
+    }
+
     public MailboxFilterResult AcceptMail(ISessionContext context, IMailbox from, IMailbox to)
     {
         //Option 1: check if any addresses with that host domain exist (so that spammers/attackers can't scan for what mailboxes exist for a given domain)
