@@ -12,6 +12,7 @@ public partial class MailPlugin : Plugin
         {
             MailManager.In.AcceptMail += AcceptMail;
             MailManager.In.HandleMail += HandleMail;
+            MailManager.Out.BeforeSend += BeforeSend;
         }
     }
 }
