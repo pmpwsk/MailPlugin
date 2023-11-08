@@ -260,6 +260,12 @@ public partial class MailPlugin : Plugin
                     var result = MailManager.Out.Send(msg, out var messageIds);
                     message.MessageId = string.Join('\n', messageIds);
                     var log = message.Log;
+                    if (result.Internal.Any())
+                    {
+                        log.Add("Internal:");
+                        foreach (var l in result.Internal)
+                            log.Add(l.Key.Address + ": " + l.Value);
+                    }
                     if (result.FromSelf != null)
                     {
                         log.Add("From the server directly: " + result.FromSelf.ResultType.ToString());
