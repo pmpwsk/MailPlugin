@@ -1,5 +1,6 @@
 ﻿using MimeKit;
 using System.Runtime.Serialization;
+using uwap.WebFramework.Mail;
 using static uwap.WebFramework.Mail.MailAuth;
 
 namespace uwap.WebFramework.Plugins;
@@ -63,6 +64,23 @@ public partial class MailPlugin : Plugin
             Attachments = attachments;
             AuthResult = authResult;
             Log = log;
+        }
+
+        public MailMessage(bool unread, DateTime timestampUtc, MailGen mailGen, string messageId)
+        {
+            Unread = unread;
+            TimestampUtc = timestampUtc;
+            From = new(mailGen.From);
+            To = mailGen.To.Select(x => new MailAddress(x)).ToList();
+            Cc = new();
+            Bcc = new();
+            ReplyTo = null;
+            MessageId = messageId;
+            InReplyToId = mailGen.IsReplyToMessageId;
+            Subject = mailGen.Subject;
+            Attachments = mailGen.Attachments.Select(x => new MailAttachment(x.Name, x.ContentType)).ToList();
+            AuthResult = null;
+            Log = new() { "Received internally." };
         }
 
         public MailMessage(MailAddress from, List<MailAddress> to, string subject, string? inReplyToId)
