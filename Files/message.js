@@ -34,3 +34,19 @@ async function Reply() {
         ShowError("Connection failed.");
     }
 }
+
+async function FindOriginal(encodedMessageId) {
+    let response = fetch("/api[PATH_PREFIX]/find?mailbox=" + GetQuery("mailbox") + "&id=" + encodedMessageId);
+    if (response.status === 200) {
+        let text = await response.text();
+        if (text.startsWith("mailbox=")) {
+            window.location.assign("[PATH_HOME]?" + text);
+            return;
+        }
+        else if (text === "no") {
+            ShowError("The original message was deleted or the sender did something wrong.");
+            return;
+        }
+    }
+    ShowError("Connection failed.");
+}
