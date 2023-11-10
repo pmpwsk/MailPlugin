@@ -36,8 +36,10 @@ async function Reply() {
 }
 
 async function FindOriginal(encodedMessageId) {
-    let response = fetch("/api[PATH_PREFIX]/find?mailbox=" + GetQuery("mailbox") + "&id=" + encodedMessageId);
+    let b = document.querySelector("#find");
+    b.textContent = "finding...";
     let response = await fetch("/api[PATH_PREFIX]/find?mailbox=" + GetQuery("mailbox") + "&id=" + encodedMessageId);
+    b.textContent = "find";
     if (response.status === 200) {
         let text = await response.text();
         if (text.startsWith("mailbox=")) {
