@@ -245,7 +245,7 @@ public partial class MailPlugin : Plugin
                         HighlightSidebar(page, req, "view");
                         List<IContent> headingContents = new();
                         if (message.InReplyToId != null)
-                            headingContents.Add(new Paragraph($"This is a reply to another email (<a href=\"javascript:\" onclick=\"FindOriginal('{HttpUtility.UrlEncode(message.InReplyToId)}')\">find</a>)."));
+                            headingContents.Add(new Paragraph($"This is a reply to another email (<a href=\"javascript:\" id=\"find\" onclick=\"FindOriginal('{HttpUtility.UrlEncode(message.InReplyToId)}')\">find</a>)."));
                         headingContents.Add(new Paragraph(DateTimeString(AdjustDateTime(req, message.TimestampUtc))));
                         headingContents.Add(new Paragraph("From: " + message.From.FullString));
                         foreach (var to in message.To)
