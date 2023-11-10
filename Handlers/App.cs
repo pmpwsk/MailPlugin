@@ -186,7 +186,7 @@ public partial class MailPlugin : Plugin
                     if (!folder.Contains(messageId))
                     {
                         //message isn't part of the folder, try to find the new folder and redirect
-                        req.Redirect($"{pluginHome}?mailbox={mailboxId}&folder={HttpUtility.UrlEncode(mailbox.Folders.Where(x => x.Value.Contains(messageId)).First().Key)}&message={messageIdString}");
+                        req.Redirect($"{pluginHome}?mailbox={mailboxId}&folder={HttpUtility.UrlEncode(mailbox.Folders.First(x => x.Value.Contains(messageId)).Key)}&message={messageIdString}");
                         break;
                     }
                     else
