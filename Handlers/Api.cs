@@ -1,4 +1,5 @@
 ﻿using MimeKit;
+using System.Web;
 using uwap.WebFramework.Accounts;
 using uwap.WebFramework.Mail;
 
@@ -433,6 +434,25 @@ public partial class MailPlugin : Plugin
                     mailbox.Lock();
                     mailbox.Name = name;
                     mailbox.UnlockSave();
+                }
+                break;
+            case "/find":
+                {
+                    if (InvalidMailbox(req, out var mailbox))
+                        break;
+                    if (!req.Query.TryGetValue("id", out var id))
+                    {
+                        req.Status = 400;
+                        break;
+                    }
+                    var messageKV = mailbox.Messages.LastOrDefault(x => x.Value.MessageId.Split('\n').Contains(id));
+                    if (messageKV.Equals(default(KeyValuePair<ulong,MailMessage>)))
+                    {
+                        await req.Write("no");
+                        break;
+                    }
+                    ulong messageId = messageKV.Key;
+                    await req.Write($"mailbox={mailbox.Id}&folder={HttpUtility.UrlEncode(mailbox.Folders.First(x => x.Value.Contains(messageId)).Key)}&message={messageId}");
                 }
                 break;
             default:
