@@ -14,7 +14,6 @@ let save = document.querySelector('#save');
 window.onresize = Resize;
 ta.onclick = Refocus;
 Resize();
-Load();
 
 function Resize() {
     let fullComp = window.getComputedStyle(full);
