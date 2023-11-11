@@ -411,6 +411,69 @@ public partial class MailPlugin : Plugin
                     }
                 }
                 break;
+            case "/send/preview":
+                {
+                    if (InvalidMailbox(req, out var mailbox, e))
+                        break;
+                    page.Navigation.Add(new Button("Back", $"{pathPrefix}/send?mailbox={mailbox.Id}", "right"));
+                    page.Title = "Preview draft";
+                    page.Scripts.Add(new Script(pathPrefix + "/send-preview.js"));
+                    page.Sidebar.Add(new ButtonElement("Mailboxes:", null, pluginHome));
+                    foreach (var m in (Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : new HashSet<Mailbox>())
+                        .OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@')))
+                    {
+                        page.Sidebar.Add(new ButtonElement(null, m.Address, $"{pathPrefix}/send/preview?mailbox={m.Id}"));
+                    }
+                    HighlightSidebar(page, req);
+                    if (!mailbox.Messages.TryGetValue(0, out var message))
+                    {
+                        e.Add(new LargeContainerElement("No draft found!", "", "red"));
+                        break;
+                    }
+                    List<IContent> headingContents = new();
+                    if (message.InReplyToId != null)
+                        headingContents.Add(new Paragraph($"This is a reply to another email (<a href=\"javascript:\" id=\"find\" onclick=\"FindOriginal('{HttpUtility.UrlEncode(message.InReplyToId)}')\">find</a>)."));
+                    headingContents.Add(new Paragraph("From: " + message.From.FullString));
+                    if (message.To.Any())
+                        foreach (var to in message.To)
+                            headingContents.Add(new Paragraph("To: " + to.FullString));
+                    else headingContents.Add(new Paragraph("To: [no recipients]"));
+                    headingContents.Add(new Paragraph("Subject: " + (message.Subject == "" ? "[no subject]" : message.Subject)));
+                    e.Add(new LargeContainerElement("Preview draft", headingContents) { Button = new ButtonJS("Send", "Send()", "green", id: "send") });
+                    Presets.AddError(page);
+
+                    string messagePath = $"../Mail/{mailbox.Id}/0/";
+                    string? c = null;
+                    if (File.Exists(messagePath + "text"))
+                        c = AddHTML(File.ReadAllText(messagePath + "text"));
+                    List<IContent>? textContents = c == null ? null : ReadHTML(c);
+                    if (textContents == null || (textContents.Count == 1 && textContents.First() is Paragraph p && (p.Text == "" || p.Text == "<br/>")))
+                        e.Add(new ContainerElement("No text attached!", "", "red"));
+                    else e.Add(new ContainerElement("Message", textContents));
+
+                    if (message.Attachments.Any())
+                    {
+                        e.Add(new ContainerElement("Attachments:"));
+                        int attachmentId = 0;
+                        foreach (var attachment in message.Attachments)
+                        {
+                            e.Add(new ContainerElement(null, new List<IContent>
+                                {
+                                    new Paragraph("File: " + attachment.Name ?? "Unknown name"),
+                                    new Paragraph("Type: " + attachment.MimeType ?? "Unknown type"),
+                                    new Paragraph("Size: " + FileSizeString(new FileInfo($"../Mail/{mailbox.Id}/0/{attachmentId}").Length))
+                                })
+                            {
+                                Buttons = new()
+                                {
+                                    new Button("View", $"/api{pathPrefix}/attachment?mailbox={mailbox.Id}&message=0&attachment={attachmentId}", newTab: true),
+                                    new Button("Download", $"/dl{pathPrefix}/attachment?mailbox={mailbox.Id}&message=0&attachment={attachmentId}", newTab: true)
+                                }
+                            });
+                            attachmentId++;
+                        }
+                    }
+                } break;
             case "/move":
                 {
                     if (InvalidMailboxOrMessageOrFolder(req, out var mailbox, out var message, out var messageId, out _, out var folderName, e))
