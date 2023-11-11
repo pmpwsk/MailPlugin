@@ -381,7 +381,7 @@ public partial class MailPlugin : Plugin
                 {
                     if (InvalidMailbox(req, out var mailbox, e))
                         break;
-                    page.Navigation.Add(new Button("Back", $"{pluginHome}?mailbox={mailbox.Id}", "right"));
+                    page.Navigation.Add(new Button("Back", $"{pathPrefix}/send?mailbox={mailbox.Id}", "right"));
                     page.Title = "Send an email";
                     page.Scripts.Add(new Script(pathPrefix + "/query.js"));
                     page.Scripts.Add(new Script(pathPrefix + "/send-attachments.js"));
@@ -395,8 +395,7 @@ public partial class MailPlugin : Plugin
                     e.Add(new LargeContainerElement("Send an email", new List<IContent>
                     {
                         new Paragraph($"From: {mailbox.Address}{(mailbox.Name == null ? "" : $" ({mailbox.Name})")}"),
-                    }, id: "e1")
-                    { Button = new Button("Back", $"{pathPrefix}/send?mailbox={mailbox.Id}") });
+                    }, id: "e1"));
                     e.Add(new ContainerElement("Add attachment:", new FileSelector("update-file")) { Button = new ButtonJS("Add", "Upload()", "green", id: "uploadButton") });
                     page.AddError();
                     int attachmentCount = Directory.Exists($"../Mail/{mailbox.Id}/0") ? Directory.GetFiles($"../Mail/{mailbox.Id}/0").Select(x => x.After('/').After('\\')).Count(x => x != "text") : 0;
