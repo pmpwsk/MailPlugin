@@ -14,6 +14,12 @@ let save = document.querySelector('#save');
 window.onresize = Resize;
 ta.onclick = Refocus;
 Resize();
+document.addEventListener('keydown', e => {
+    if (e.ctrlKey && e.key === 's') {
+        e.preventDefault();
+        Save();
+    }
+});
 
 function Resize() {
     let fullComp = window.getComputedStyle(full);
