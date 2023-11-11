@@ -417,6 +417,7 @@ public partial class MailPlugin : Plugin
                         break;
                     page.Navigation.Add(new Button("Back", $"{pathPrefix}/send?mailbox={mailbox.Id}", "right"));
                     page.Title = "Preview draft";
+                    page.Scripts.Add(new Script(pathPrefix + "/query.js"));
                     page.Scripts.Add(new Script(pathPrefix + "/send-preview.js"));
                     page.Sidebar.Add(new ButtonElement("Mailboxes:", null, pluginHome));
                     foreach (var m in (Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : new HashSet<Mailbox>())
