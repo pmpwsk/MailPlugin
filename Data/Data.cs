@@ -116,7 +116,7 @@ public partial class MailPlugin : Plugin
         return false;
     }
 
-    private bool InvalidMessage(IRequest req, [MaybeNullWhen(true)] out MailMessage message, [MaybeNullWhen(true)] out ulong messageId, Mailbox mailbox)
+    private bool InvalidMessage(IRequest req, [MaybeNullWhen(true)] out MailMessage message, [MaybeNullWhen(true)] out ulong messageId, Mailbox mailbox, bool acceptDraft = false)
     {
         if (!req.Query.TryGetValue("message", out var messageIdString))
         {
@@ -125,7 +125,7 @@ public partial class MailPlugin : Plugin
             messageId = default;
             return true;
         }
-        if ((!ulong.TryParse(messageIdString, out messageId)) || messageId == 0 || !mailbox.Messages.TryGetValue(messageId, out message))
+        if ((!ulong.TryParse(messageIdString, out messageId)) || (messageId == 0 && !acceptDraft) || !mailbox.Messages.TryGetValue(messageId, out message))
         {
             req.Status = 404;
             message = null;
@@ -161,7 +161,7 @@ public partial class MailPlugin : Plugin
         return false;
     }
 
-    private bool InvalidMailboxOrMessage(IRequest req, [MaybeNullWhen(true)] out Mailbox mailbox, [MaybeNullWhen(true)] out MailMessage message, [MaybeNullWhen(true)] out ulong messageId)
+    private bool InvalidMailboxOrMessage(IRequest req, [MaybeNullWhen(true)] out Mailbox mailbox, [MaybeNullWhen(true)] out MailMessage message, [MaybeNullWhen(true)] out ulong messageId, bool acceptDraft = false)
     {
         if (InvalidMailbox(req, out mailbox))
         {
@@ -169,7 +169,7 @@ public partial class MailPlugin : Plugin
             messageId = default;
             return true;
         }
-        if (InvalidMessage(req, out message, out messageId, mailbox))
+        if (InvalidMessage(req, out message, out messageId, mailbox, acceptDraft))
         {
             mailbox = null;
             return true;
@@ -193,7 +193,7 @@ public partial class MailPlugin : Plugin
         return false;
     }
 
-    private bool InvalidMailboxOrMessageOrFolder(IRequest req, [MaybeNullWhen(true)] out Mailbox mailbox, [MaybeNullWhen(true)] out MailMessage message, [MaybeNullWhen(true)] out ulong messageId, [MaybeNullWhen(true)] out SortedSet<ulong> folder, [MaybeNullWhen(true)] out string folderName)
+    private bool InvalidMailboxOrMessageOrFolder(IRequest req, [MaybeNullWhen(true)] out Mailbox mailbox, [MaybeNullWhen(true)] out MailMessage message, [MaybeNullWhen(true)] out ulong messageId, [MaybeNullWhen(true)] out SortedSet<ulong> folder, [MaybeNullWhen(true)] out string folderName, bool acceptDraft = false)
     {
         if (InvalidMailbox(req, out mailbox))
         {
@@ -203,7 +203,7 @@ public partial class MailPlugin : Plugin
             folderName = null;
             return true;
         }
-        if (InvalidMessage(req, out message, out messageId, mailbox))
+        if (InvalidMessage(req, out message, out messageId, mailbox, acceptDraft))
         {
             mailbox = null;
             folder = null;
