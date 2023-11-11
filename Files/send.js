@@ -51,6 +51,12 @@ async function GoToAttachments() {
     }
 }
 
+async function GoToPreview() {
+    if (await Save()) {
+        window.location.assign("[PATH_PREFIX]/send/preview?mailbox=" + GetQuery("mailbox"));
+    }
+}
+
 async function Save() {
     save.innerText = "Saving...";
     save.className = "green";
