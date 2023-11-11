@@ -362,6 +362,7 @@ public partial class MailPlugin : Plugin
                     e.Add(Presets.ErrorElement);
                     e.Add(new ContainerElement(null, "Draft:", id: "e2") { Buttons = new()
                     {
+                        new ButtonJS("Preview", "GoToPreview()"),
                         new ButtonJS("Saved!", "Save()", id: "save"),
                         new ButtonJS("Discard", "Discard()", "red", id: "discardButton")
                     }});
