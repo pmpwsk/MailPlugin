@@ -14,7 +14,7 @@ public partial class MailPlugin : Plugin
         {
             case "/attachment":
                 {
-                    if (InvalidMailboxOrMessage(req, out var mailbox, out var message, out var messageId))
+                    if (InvalidMailboxOrMessage(req, out var mailbox, out var message, out var messageId, true))
                         break;
                     if ((!req.Query.TryGetValue("attachment", out string? attachmentIdString)) || !int.TryParse(attachmentIdString, out var attachmentId))
                     {
