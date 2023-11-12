@@ -34,7 +34,8 @@ public partial class MailPlugin : Plugin
                 }
                 if (addNewLine)
                     result.Append("<br/>");
-                result.Append(line.Trim());
+
+                result.Append(string.Join(' ', AddLinksToWords(trimmed)));
                 addNewLine = true;
             }
         }
