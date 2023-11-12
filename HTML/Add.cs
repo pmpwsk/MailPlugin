@@ -44,6 +44,18 @@ public partial class MailPlugin : Plugin
 
         return result.ToString();
     }
+
+    internal static IEnumerable<string> AddLinksToWords(string line)
+    {
+        foreach (string word in line.Split(' '))
+        {
+            string? cleanUrl = CleanHttpUrl(word);
+            if (cleanUrl == null)
+                yield return word;
+            else yield return $"<a href=\"{word}\">{cleanUrl}</a>";
+        }
+    }
+
     internal static string? CleanHttpUrl(string url)
     {
         if (url.StartsWith("https://"))
