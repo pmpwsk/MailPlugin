@@ -44,4 +44,10 @@ public partial class MailPlugin : Plugin
 
         return result.ToString();
     }
+    private static string CleanHttpUrlWithoutProtocol(string urlWithoutProto)
+    {
+        if (urlWithoutProto.SplitAtLast('@', out _, out var newUrl))
+            return newUrl;
+        else return urlWithoutProto;
+    }
 }
