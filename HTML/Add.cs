@@ -44,6 +44,15 @@ public partial class MailPlugin : Plugin
 
         return result.ToString();
     }
+    internal static string? CleanHttpUrl(string url)
+    {
+        if (url.StartsWith("https://"))
+            return "https://" + CleanHttpUrlWithoutProtocol(url.Remove(0, 8));
+        else if (url.StartsWith("http://"))
+            return "http://" + CleanHttpUrlWithoutProtocol(url.Remove(0, 7));
+        else return null;
+    }
+
     private static string CleanHttpUrlWithoutProtocol(string urlWithoutProto)
     {
         if (urlWithoutProto.SplitAtLast('@', out _, out var newUrl))
