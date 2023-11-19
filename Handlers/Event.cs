@@ -5,14 +5,14 @@ public partial class MailPlugin : Plugin
     /// <summary>
     /// first key is the mailbox to be listened on, second key is the listening request, value is true if "refresh" should be sent and false if "icon" should be sent
     /// </summary>
-    private readonly Dictionary<Mailbox, Dictionary<EventRequest, bool>> IncomingListeners = new();
+    private readonly Dictionary<Mailbox, Dictionary<EventRequest, bool>> IncomingListeners = [];
 
     private Task RemoveIncomingListener(object requestObject)
     {
         if (requestObject is EventRequest req)
         {
             foreach (var kv in IncomingListeners)
-                if (kv.Value.Remove(req) && !kv.Value.Any())
+                if (kv.Value.Remove(req) && kv.Value.Count == 0)
                     IncomingListeners.Remove(kv.Key);
         }
         return Task.CompletedTask;
@@ -20,7 +20,7 @@ public partial class MailPlugin : Plugin
 
     public override async Task Handle(EventRequest req, string path, string pathPrefix)
     {
-        if (req.User == null || (!req.LoggedIn))
+        if (!req.LoggedIn)
         {
             req.Status = 403;
             return;
@@ -34,7 +34,7 @@ public partial class MailPlugin : Plugin
                 //mailbox - refresh for mailbox, icon for all others
                 //inbox - refresh for mailbox, icon for all others
                 //other folder - icon for all
-                var mailboxes = Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : new HashSet<Mailbox>();
+                var mailboxes = Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : [];
                 ulong actualLast;
                 if (InvalidMailbox(req, out var mailbox))
                 {

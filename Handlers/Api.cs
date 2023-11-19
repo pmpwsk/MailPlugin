@@ -9,7 +9,7 @@ public partial class MailPlugin : Plugin
 {
     public override async Task Handle(ApiRequest req, string path, string pathPrefix)
     {
-        if (req.User == null || (!req.LoggedIn))
+        if (!req.LoggedIn)
         {
             req.Status = 403;
             return;
@@ -102,18 +102,18 @@ public partial class MailPlugin : Plugin
                         mailbox.Lock();
                         if (!mailbox.AllowedUserIds.TryGetValue(userTable.Name, out var userTableDict))
                         {
-                            userTableDict = new();
+                            userTableDict = [];
                             mailbox.AllowedUserIds[userTable.Name] = userTableDict;
                         }
                         userTableDict.Add(user.Id);
                         if (!Mailboxes.UserAllowedMailboxes.TryGetValue(userTable.Name, out var userTableDict2))
                         {
-                            userTableDict2 = new();
+                            userTableDict2 = [];
                             Mailboxes.UserAllowedMailboxes[userTable.Name] = userTableDict2;
                         }
                         if (!userTableDict2.TryGetValue(user.Id, out var userSet))
                         {
-                            userSet = new();
+                            userSet = [];
                             userTableDict2[user.Id] = userSet;
                         }
                         userSet.Add(mailbox);
@@ -147,7 +147,7 @@ public partial class MailPlugin : Plugin
                         if (mailbox.AllowedUserIds.TryGetValue(userTableName, out var userTableSet))
                         {
                             userTableSet.Remove(userId);
-                            if (!userTableSet.Any())
+                            if (userTableSet.Count == 0)
                                 mailbox.AllowedUserIds.Remove(userTableName);
                         }
                         if (Mailboxes.UserAllowedMailboxes.TryGetValue(userTableName, out var userTableDict))
@@ -155,10 +155,10 @@ public partial class MailPlugin : Plugin
                             if (userTableDict.TryGetValue(userId, out var userSet))
                             {
                                 userSet.Remove(mailbox);
-                                if (!userSet.Any())
+                                if (userSet.Count == 0)
                                     userTableDict.Remove(userId);
                             }
-                            if (!userTableDict.Any())
+                            if (userTableDict.Count == 0)
                                 Mailboxes.UserAllowedMailboxes.Remove(userTableName);
                         }
                         mailbox.UnlockSave();
@@ -232,7 +232,7 @@ public partial class MailPlugin : Plugin
                         await req.Write("invalid-subject");
                         break;
                     }
-                    if (!message.To.Any())
+                    if (message.To.Count == 0)
                     {
                         await req.Write("invalid-to");
                         break;
@@ -262,7 +262,7 @@ public partial class MailPlugin : Plugin
                     var result = MailManager.Out.Send(msg, out var messageIds);
                     message.MessageId = string.Join('\n', messageIds);
                     var log = message.Log;
-                    if (result.Internal.Any())
+                    if (result.Internal.Count != 0)
                     {
                         log.Add("Internal:");
                         foreach (var l in result.Internal)
@@ -356,7 +356,7 @@ public partial class MailPlugin : Plugin
                         break;
                     }
                     mailbox.Lock();
-                    mailbox.Messages[0] = new(new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address), new() { message.From }, (message.Subject.ToLower().StartsWith("re:") ? "" : "Re: ") + message.Subject, message.MessageId);
+                    mailbox.Messages[0] = new(new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address), [message.From], (message.Subject.ToLower().StartsWith("re:") ? "" : "Re: ") + message.Subject, message.MessageId);
                     Directory.CreateDirectory($"../Mail/{mailbox.Id}/0");
                     File.WriteAllText($"../Mail/{mailbox.Id}/0/text", "");
                     mailbox.UnlockSave();
@@ -402,7 +402,7 @@ public partial class MailPlugin : Plugin
                         break;
                     }
                     mailbox.Lock();
-                    mailbox.Folders[name] = new();
+                    mailbox.Folders[name] = [];
                     mailbox.UnlockSave();
                 }
                 break;

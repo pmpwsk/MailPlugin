@@ -6,14 +6,14 @@ namespace uwap.WebFramework.Plugins;
 
 public partial class MailPlugin : Plugin
 {
-    private ulong LastInboxMessageId(Mailbox mailbox)
+    private static ulong LastInboxMessageId(Mailbox mailbox)
     {
-        if (mailbox.Folders.TryGetValue("Inbox", out var inbox) && inbox.Any())
+        if (mailbox.Folders.TryGetValue("Inbox", out var inbox) && inbox.Count != 0)
             return inbox.Max;
         else return 0;
     }
 
-    private IScript IncomingScript(AppRequest req, ulong last, string pathPrefix)
+    private static CustomScript IncomingScript(AppRequest req, ulong last, string pathPrefix)
     {
         string query = req.Context.Request.QueryString.HasValue ? req.Context.Request.QueryString.Value ?? "" : "";
         if (query == "")
@@ -27,7 +27,7 @@ public partial class MailPlugin : Plugin
     {
         Presets.CreatePage(req, "Mail", out Page page, out List<IPageElement> e);
         Presets.Navigation(req, page);
-        if (req.User == null || (!req.LoggedIn))
+        if (!req.LoggedIn)
         {
             e.Add(new HeadingElement("Not logged in!", "You need to be logged in to use this application.", "red"));
             return Task.CompletedTask;
@@ -37,7 +37,7 @@ public partial class MailPlugin : Plugin
 
         page.Favicon = pathPrefix + "/icon.ico";
         page.Head.Add($"<link rel=\"manifest\" href=\"{pathPrefix}/manifest.json\" />");
-        page.Navigation = new() { page.Navigation.FirstOrDefault() ?? new Button(req.Domain, "/"), new Button("Mail", pluginHome) };
+        page.Navigation = [page.Navigation.FirstOrDefault() ?? new Button(req.Domain, "/"), new Button("Mail", pluginHome)];
         switch (path)
         {
             case "":
@@ -49,7 +49,7 @@ public partial class MailPlugin : Plugin
                         page.Navigation.Add(new Button("Back", "/", "right"));
                         page.Title = "Mailboxes";
                         bool isAdmin = req.IsAdmin();
-                        var mailboxes = (Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : new HashSet<Mailbox>())
+                        var mailboxes = (Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : [])
                             .OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@'));
 
                         if (isAdmin || mailboxes.Count() != 1)
@@ -99,7 +99,7 @@ public partial class MailPlugin : Plugin
                     if (!req.Query.TryGetValue("folder", out var folderName))
                     {/////
                         //list folders in the mailbox (inbox, sent, recycle bin, spam are pinned)
-                        var mailboxes = (Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : new HashSet<Mailbox>())
+                        var mailboxes = (Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : [])
                             .OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@')).ToList();
                         page.Navigation.Add(new Button("Back", mailboxes.Count == 1 && !req.IsAdmin() ? "/" : pluginHome, "right"));
                         page.Scripts.Add(IncomingScript(req, LastInboxMessageId(mailbox), pathPrefix));
@@ -114,12 +114,11 @@ public partial class MailPlugin : Plugin
                         }
                         HighlightSidebar(page, req);
                         e.Add(new LargeContainerElement($"Mail ({mailbox.Address})", "", "overflow"));
-                        e.Add(new ContainerElement(null, "Actions:") { Buttons = new()
-                        {
+                        e.Add(new ContainerElement(null, "Actions:") { Buttons =
+                        [
                             new Button("Settings", $"{pathPrefix}/settings?mailbox={mailboxId}"),
                             new Button("Send", $"{pathPrefix}/send?mailbox={mailboxId}", "green"),
-                        }
-                        });
+                        ]});
                         foreach (var folderItem in SortFolders(mailbox.Folders))
                         {
                             bool unread = GetLastReversed(folderItem.Value, MessagePreloadCount, 0).Any(x => mailbox.Messages.TryGetValue(x, out var message) && message.Unread);
@@ -156,7 +155,7 @@ public partial class MailPlugin : Plugin
                             page.Favicon = pathPrefix + "/icon-red.ico";
                         HighlightSidebar(page, req);
                         e.Add(new LargeContainerElement($"{folderName} ({mailbox.Address})", ""));
-                        if (folder.Any())
+                        if (folder.Count != 0)
                         {
                             int offset = 0;
                             if (req.Query.TryGetValue("offset", out var offsetString) && int.TryParse(offsetString, out int offset2) && offset2 >= 0)
@@ -243,7 +242,7 @@ public partial class MailPlugin : Plugin
                         if (offset + MessagePreloadCount < folder.Count)
                             page.Sidebar.Add(new ButtonElement(null, "Older messages", $"{PathWithoutQueries(req, "offset")}&offset={offset + MessagePreloadCount}"));
                         HighlightSidebar(page, req, "view");
-                        List<IContent> headingContents = new();
+                        List<IContent> headingContents = [];
                         if (message.InReplyToId != null)
                             headingContents.Add(new Paragraph($"This is a reply to another email (<a href=\"javascript:\" id=\"find\" onclick=\"FindOriginal('{HttpUtility.UrlEncode(message.InReplyToId)}')\">find</a>)."));
                         headingContents.Add(new Paragraph(DateTimeString(AdjustDateTime(req, message.TimestampUtc))));
@@ -256,13 +255,13 @@ public partial class MailPlugin : Plugin
                             headingContents.Add(new Paragraph("BCC: " + bcc.FullString));
                         e.Add(new LargeContainerElement($"{message.Subject}", headingContents) { Button = new ButtonJS("Delete", "Delete()", "red", id: "deleteButton") });
                         if (folderName != "Sent")
-                            e.Add(new ContainerElement(null, "Do:") { Buttons = new()
-                            {
+                            e.Add(new ContainerElement(null, "Do:") { Buttons =
+                            [
                                 new ButtonJS("Reply", "Reply()"),
                                 new ButtonJS("Unread", "Unread()"),
                                 new Button("Forward", $"{pathPrefix}/forward?mailbox={mailbox.Id}&folder={folderName}&message={messageId}"),
                                 new Button("Move", $"{pathPrefix}/move?mailbox={mailbox.Id}&folder={folderName}&message={messageId}")
-                            }});
+                            ]});
                         Presets.AddError(page);
 
                         string? c = null;
@@ -275,32 +274,32 @@ public partial class MailPlugin : Plugin
                             e.Add(new ContainerElement("No text attached!", "", "red"));
                         else e.Add(new ContainerElement("Message", textContents));
 
-                        if (message.Attachments.Any())
+                        if (message.Attachments.Count != 0)
                         {
                             e.Add(new ContainerElement("Attachments:"));
                             int attachmentId = 0;
                             foreach (var attachment in message.Attachments)
                             {
-                                e.Add(new ContainerElement(null, new List<IContent>
-                                {
+                                e.Add(new ContainerElement(null,
+                                [
                                     new Paragraph("File: " + attachment.Name ?? "Unknown name"),
                                     new Paragraph("Type: " + attachment.MimeType ?? "Unknown type"),
                                     new Paragraph("Size: " + FileSizeString(new FileInfo($"../Mail/{mailbox.Id}/{messageId}/{attachmentId}").Length))
-                                }) { Buttons = new()
-                                {
-                                    new Button("View", $"/api{pathPrefix}/attachment?mailbox={mailboxId}&message={messageId}&attachment={attachmentId}", newTab: true),
-                                    new Button("Download", $"/dl{pathPrefix}/attachment?mailbox={mailboxId}&message={messageId}&attachment={attachmentId}", newTab: true)
-                                }
+                                ]) { Buttons =
+                                    [
+                                        new Button("View", $"/api{pathPrefix}/attachment?mailbox={mailboxId}&message={messageId}&attachment={attachmentId}", newTab: true),
+                                        new Button("Download", $"/dl{pathPrefix}/attachment?mailbox={mailboxId}&message={messageId}&attachment={attachmentId}", newTab: true)
+                                    ]
                                 });
                                 attachmentId++;
                             }
                         }
-                        List<IContent> log = new();
+                        List<IContent> log = [];
                         foreach (var l in message.Log)
                             log.Add(new Paragraph(l));
                         e.Add(new ContainerElement("Log", log));
 
-                        List<string> views = new();
+                        List<string> views = [];
                         if (hasText)
                             views.Add($"<a href=\"{PathWithoutQueries(req, "view", "offset")}&view=text\" target=\"_blank\">Raw text</a>");
                         if (hasHtml)
@@ -308,7 +307,7 @@ public partial class MailPlugin : Plugin
                             views.Add($"<a href=\"{PathWithoutQueries(req, "view", "offset")}&view=html\" target=\"_blank\">HTML code</a>");
                             views.Add($"<a href=\"{PathWithoutQueries(req, "view", "offset")}&view=load-html\" target=\"_blank\">Load HTML (dangerous!)</a>");
                         }
-                        if (views.Any())
+                        if (views.Count != 0)
                             e.Add(new ContainerElement("View", new BulletList(views)));
                     }
                 } break;
@@ -337,22 +336,21 @@ public partial class MailPlugin : Plugin
                     page.Scripts.Add(new Script(pathPrefix + "/query.js"));
                     page.Scripts.Add(new Script(pathPrefix + "/send.js"));
                     page.Sidebar.Add(new ButtonElement("Mailboxes:", null, pluginHome));
-                    foreach (var m in (Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : new HashSet<Mailbox>())
+                    foreach (var m in (Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : [])
                         .OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@')))
                     {
                         page.Sidebar.Add(new ButtonElement(null, m.Address, $"{pathPrefix}/send?mailbox={m.Id}"));
                     }
                     HighlightSidebar(page, req);
-                    page.Styles.Add(new CustomStyle(new List<string>
-                    {
+                    page.Styles.Add(new CustomStyle(
                         "#e3 { display: flex; flex-flow: column; }",
                         "#e3 textarea { flex: 1 1 auto; }",
                         "#e3 h1, #e3 h2, #e3 div.buttons { flex: 0 1 auto; }"
-                    }));
-                    List<IContent> headingContent = new()
-                    {
+                    ));
+                    List<IContent> headingContent =
+                    [
                         new Paragraph($"From: {mailbox.Address}{(mailbox.Name == null ? "" : $" ({mailbox.Name})")}")
-                    };
+                    ];
                     if (message != null && message.InReplyToId != null)
                     {
                         headingContent.Add(new Paragraph($"To: {to}"));
@@ -360,13 +358,13 @@ public partial class MailPlugin : Plugin
                     } 
                     e.Add(new LargeContainerElement((message == null || message.InReplyToId == null) ? "Send an email" : "Reply", headingContent, id: "e1") { Button = new ButtonJS("Send", "Send()", "green", id: "send") });
                     e.Add(Presets.ErrorElement);
-                    e.Add(new ContainerElement(null, "Draft:", id: "e2") { Buttons = new()
-                    {
+                    e.Add(new ContainerElement(null, "Draft:", id: "e2") { Buttons =
+                    [
                         new ButtonJS("Preview", "GoToPreview()"),
                         new ButtonJS("Saved!", "Save()", id: "save"),
                         new ButtonJS("Discard", "Discard()", "red", id: "discardButton")
-                    }});
-                    List<IContent> inputs = new();
+                    ]});
+                    List<IContent> inputs = [];
                     if (message == null || message.InReplyToId == null)
                     {
                         inputs.Add(new TextBox("Recipient(s)...", to, "to", TextBoxRole.Email, autofocus: true, onInput: "MessageChanged()"));
@@ -387,16 +385,11 @@ public partial class MailPlugin : Plugin
                     page.Scripts.Add(new Script(pathPrefix + "/query.js"));
                     page.Scripts.Add(new Script(pathPrefix + "/send-attachments.js"));
                     page.Sidebar.Add(new ButtonElement("Mailboxes:", null, pluginHome));
-                    foreach (var m in (Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : new HashSet<Mailbox>())
+                    foreach (var m in (Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : [])
                         .OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@')))
-                    {
                         page.Sidebar.Add(new ButtonElement(null, m.Address, $"{pathPrefix}/send/attachments?mailbox={m.Id}"));
-                    }
                     HighlightSidebar(page, req);
-                    e.Add(new LargeContainerElement("Send an email", new List<IContent>
-                    {
-                        new Paragraph($"From: {mailbox.Address}{(mailbox.Name == null ? "" : $" ({mailbox.Name})")}"),
-                    }, id: "e1"));
+                    e.Add(new LargeContainerElement("Send an email", $"From: {mailbox.Address}{(mailbox.Name == null ? "" : $" ({mailbox.Name})")}", id: "e1"));
                     e.Add(new ContainerElement("Add attachment:", new FileSelector("update-file")) { Button = new ButtonJS("Add", "Upload()", "green", id: "uploadButton") });
                     page.AddError();
                     int attachmentCount = Directory.Exists($"../Mail/{mailbox.Id}/0") ? Directory.GetFiles($"../Mail/{mailbox.Id}/0").Select(x => x.After('/').After('\\')).Count(x => x != "text") : 0;
@@ -420,22 +413,20 @@ public partial class MailPlugin : Plugin
                     page.Scripts.Add(new Script(pathPrefix + "/query.js"));
                     page.Scripts.Add(new Script(pathPrefix + "/send-preview.js"));
                     page.Sidebar.Add(new ButtonElement("Mailboxes:", null, pluginHome));
-                    foreach (var m in (Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : new HashSet<Mailbox>())
+                    foreach (var m in (Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : [])
                         .OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@')))
-                    {
                         page.Sidebar.Add(new ButtonElement(null, m.Address, $"{pathPrefix}/send/preview?mailbox={m.Id}"));
-                    }
                     HighlightSidebar(page, req);
                     if (!mailbox.Messages.TryGetValue(0, out var message))
                     {
                         e.Add(new LargeContainerElement("No draft found!", "", "red"));
                         break;
                     }
-                    List<IContent> headingContents = new();
+                    List<IContent> headingContents = [];
                     if (message.InReplyToId != null)
                         headingContents.Add(new Paragraph($"This is a reply to another email (<a href=\"javascript:\" id=\"find\" onclick=\"FindOriginal('{HttpUtility.UrlEncode(message.InReplyToId)}')\">find</a>)."));
                     headingContents.Add(new Paragraph("From: " + message.From.FullString));
-                    if (message.To.Any())
+                    if (message.To.Count != 0)
                         foreach (var to in message.To)
                             headingContents.Add(new Paragraph("To: " + to.FullString));
                     else headingContents.Add(new Paragraph("To: [no recipients]"));
@@ -452,24 +443,23 @@ public partial class MailPlugin : Plugin
                         e.Add(new ContainerElement("No text attached!", "", "red"));
                     else e.Add(new ContainerElement("Message", textContents));
 
-                    if (message.Attachments.Any())
+                    if (message.Attachments.Count != 0)
                     {
                         e.Add(new ContainerElement("Attachments:"));
                         int attachmentId = 0;
                         foreach (var attachment in message.Attachments)
                         {
-                            e.Add(new ContainerElement(null, new List<IContent>
-                                {
-                                    new Paragraph("File: " + attachment.Name ?? "Unknown name"),
-                                    new Paragraph("Type: " + attachment.MimeType ?? "Unknown type"),
-                                    new Paragraph("Size: " + FileSizeString(new FileInfo($"../Mail/{mailbox.Id}/0/{attachmentId}").Length))
-                                })
-                            {
-                                Buttons = new()
-                                {
+                            e.Add(new ContainerElement(null,
+                            [
+                                new Paragraph("File: " + attachment.Name ?? "Unknown name"),
+                                new Paragraph("Type: " + attachment.MimeType ?? "Unknown type"),
+                                new Paragraph("Size: " + FileSizeString(new FileInfo($"../Mail/{mailbox.Id}/0/{attachmentId}").Length))
+                            ])
+                            { Buttons =
+                                [
                                     new Button("View", $"/api{pathPrefix}/attachment?mailbox={mailbox.Id}&message=0&attachment={attachmentId}", newTab: true),
                                     new Button("Download", $"/dl{pathPrefix}/attachment?mailbox={mailbox.Id}&message=0&attachment={attachmentId}", newTab: true)
-                                }
+                                ]
                             });
                             attachmentId++;
                         }
@@ -508,7 +498,7 @@ public partial class MailPlugin : Plugin
                     page.Scripts.Add(new Script(pathPrefix + "/query.js"));
                     page.Scripts.Add(new Script(pathPrefix + "/settings.js"));
                     page.Sidebar.Add(new ButtonElement("Mailboxes:", null, pluginHome));
-                    foreach (var m in (Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : new HashSet<Mailbox>())
+                    foreach (var m in (Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : [])
                         .OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@')))
                         page.Sidebar.Add(new ButtonElement(null, m.Address, $"{pathPrefix}/settings?mailbox={m.Id}"));
                     HighlightSidebar(page, req);
@@ -527,7 +517,7 @@ public partial class MailPlugin : Plugin
                     page.Scripts.Add(new Script(pathPrefix + "/query.js"));
                     page.Scripts.Add(new Script(pathPrefix + "/settings-folders.js"));
                     page.Sidebar.Add(new ButtonElement("Mailboxes:", null, pluginHome));
-                    foreach (var m in (Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : new HashSet<Mailbox>())
+                    foreach (var m in (Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : [])
                         .OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@')))
                         page.Sidebar.Add(new ButtonElement(null, m.Address, $"{pathPrefix}/settings/folders?mailbox={m.Id}"));
                     HighlightSidebar(page, req);
@@ -535,11 +525,9 @@ public partial class MailPlugin : Plugin
                     e.Add(new ContainerElement("New folder", new TextBox("Enter a name...", null, "name", onEnter: "Create()", autofocus: true)) { Button = new ButtonJS("Create", "Create()", "green")});
                     page.AddError();
                     foreach (var f in SortFolders(mailbox.Folders.Keys))
-                    {
                         if (new[] { "Inbox", "Sent", "Spam", "Trash" }.Contains(f))
                             e.Add(new ContainerElement(null, f));
                         else e.Add(new ContainerElement(null, f) { Button = new ButtonJS("Delete", $"Delete('{HttpUtility.UrlEncode(f)}', '{f.ToId()}')", "red", id: f.ToId()) });
-                    }
                 }
                 break;
             case "/manage":
@@ -566,16 +554,13 @@ public partial class MailPlugin : Plugin
                         page.Scripts.Add(new Script(pathPrefix + "/manage-mailbox.js"));
                         page.Sidebar.Add(new ContainerElement("Mailboxes:", ""));
                         foreach (var m in Mailboxes.Select(x => x.Value).OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@')))
-                        {
                             page.Sidebar.Add(new ButtonElement(null, m.Address, $"{pathPrefix}/manage?mailbox={m.Id}"));
-                        }
                         HighlightSidebar(page, req);
                         e.Add(new LargeContainerElement("Manage " + mailbox.Address));
                         e.Add(new ButtonElementJS("Delete mailbox", null, "Delete()", id: "deleteButton"));
                         e.Add(new ContainerElement("Add access:", new TextBox("Enter a username...", null, "username", onEnter: "Add()")) { Button = new ButtonJS("Add", "Add()", "green") });
                         Presets.AddError(page);
-                        if (mailbox.AllowedUserIds.Any(x => x.Value.Any()))
-                        {
+                        if (mailbox.AllowedUserIds.Any(x => x.Value.Count != 0))
                             foreach (var userTableKV in mailbox.AllowedUserIds)
                             {
                                 UserTable userTable = UserTable.Import(userTableKV.Key);
@@ -583,11 +568,7 @@ public partial class MailPlugin : Plugin
                                     if (userTable.TryGetValue(userId, out User? u))
                                         e.Add(new ContainerElement(u.Username, u.Id) { Button = new ButtonJS("Remove", $"Remove('{userTable.Name}:{userId}')", "red") });
                             }
-                        }
-                        else
-                        {
-                            e.Add(new ContainerElement("No allowed accounts!", "", "red"));
-                        }
+                        else e.Add(new ContainerElement("No allowed accounts!", "", "red"));
                     }
                     else
                     {
@@ -600,16 +581,9 @@ public partial class MailPlugin : Plugin
                         e.Add(new ContainerElement("Create mailbox:", new TextBox("Enter an address...", null, "address", onEnter: "Create()")) { Button = new ButtonJS("Create", "Create()", "green") });
                         Presets.AddError(page);
                         if (mailboxes.Any())
-                        {
                             foreach (Mailbox m in mailboxes)
-                            {
                                 e.Add(new ButtonElement(m.Address, m.Name ?? "", $"{pathPrefix}/manage?mailbox={m.Id}"));
-                            }
-                        }
-                        else
-                        {
-                            e.Add(new ContainerElement("No mailboxes!", "", "red"));
-                        }
+                        else e.Add(new ContainerElement("No mailboxes!", "", "red"));
                     }
                 }
                 break;

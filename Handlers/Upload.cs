@@ -4,7 +4,7 @@ public partial class MailPlugin : Plugin
 {
     public override Task Handle(UploadRequest req, string path, string pathPrefix)
     {
-        if (req.User == null || (!req.LoggedIn))
+        if (!req.LoggedIn)
         {
             req.Status = 403;
             return Task.CompletedTask;

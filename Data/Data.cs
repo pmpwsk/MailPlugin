@@ -36,7 +36,7 @@ public partial class MailPlugin : Plugin
     private static string DateTimeString(DateTime dt)
         => $"{dt.DayOfWeek}, {dt.Year}/{dt.Month}/{dt.Day}, {dt.ToShortTimeString()}";
 
-    private static readonly string[] FileSizeUnits = new[] { "B", "KB", "MB", "GB", "TB", "PB", "EB" };
+    private static readonly string[] FileSizeUnits = ["B", "KB", "MB", "GB", "TB", "PB", "EB"];
     private static string FileSizeString(long size)
     {
         int factor = (int)Math.Floor(Math.Log(size, 1000));
@@ -76,7 +76,7 @@ public partial class MailPlugin : Plugin
             yield return f;
     }
 
-    private IEnumerable<KeyValuePair<string,SortedSet<ulong>>> SortFolders(Dictionary<string,SortedSet<ulong>> folders)
+    private static IEnumerable<KeyValuePair<string,SortedSet<ulong>>> SortFolders(Dictionary<string,SortedSet<ulong>> folders)
     {
         var def = new[] { "Inbox", "Sent", "Trash", "Spam" }.Select(x => new KeyValuePair<string, SortedSet<ulong>>(x, folders[x]));
         foreach (var f in def)
@@ -89,12 +89,6 @@ public partial class MailPlugin : Plugin
     {
         if (req.GetType() == typeof(AppRequest))
             throw new Exception("An invalidation method for non-AppRequest handling was used for an AppRequest.");
-        if (req.User == null)
-        {
-            req.Status = 403;
-            mailbox = null;
-            return true;
-        }
         if (!req.Query.TryGetValue("mailbox", out string? mailboxId))
         {
             req.Status = 400;
@@ -222,12 +216,6 @@ public partial class MailPlugin : Plugin
 
     private bool InvalidMailbox(AppRequest req, [MaybeNullWhen(true)] out Mailbox mailbox, List<IPageElement> e)
     {
-        if (req.User == null)
-        {
-            req.Status = 403;
-            mailbox = null;
-            return true;
-        }
         if (!req.Query.TryGetValue("mailbox", out string? mailboxId))
         {
             req.Status = 400;
