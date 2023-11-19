@@ -82,7 +82,8 @@ public partial class MailPlugin : Plugin
                     int colon = usernameCombined.IndexOf(':');
                     if (colon != -1)
                     {
-                        userTable = AccountManager.Settings.UserTables.Values.FirstOrDefault(x => x.Name == usernameCombined.Remove(colon));
+                        string userTableName = usernameCombined.Remove(colon);
+                        userTable = Server.Config.Accounts.UserTables.Values.FirstOrDefault(x => x.Name == userTableName);
                         username = usernameCombined.Remove(0, colon + 1);
                     }
                     if (userTable == null)
