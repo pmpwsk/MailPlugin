@@ -356,10 +356,10 @@ public partial class MailPlugin : Plugin
                         break;
                     }
                     mailbox.Lock();
-                    string subject = message.Subject;
-                    if (message.Subject.ToLower().SplitAtFirst(':', out var subjectPrefix, out var realSubject) && subjectPrefix.All(char.IsLetter) && (subjectPrefix.Length == 2 || subjectPrefix.Length == 3) && realSubject.TrimStart() != "")
-                        subject = "Re: " + subject;
-                    mailbox.Messages[0] = new(new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address), [message.From], subject, message.MessageId);
+                    string subject = message.Subject.Trim();
+                    while (subject.SplitAtFirst(':', out var subjectPrefix, out var realSubject) && subjectPrefix.All(char.IsLetter) && (subjectPrefix.Length == 2 || subjectPrefix.Length == 3) && realSubject.TrimStart() != "")
+                        subject = realSubject.TrimStart();
+                    mailbox.Messages[0] = new(new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address), [message.From], "Re: " + subject, message.MessageId);
                     Directory.CreateDirectory($"../Mail/{mailbox.Id}/0");
                     File.WriteAllText($"../Mail/{mailbox.Id}/0/text", "");
                     mailbox.UnlockSave();
