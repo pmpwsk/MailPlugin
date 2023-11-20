@@ -6,19 +6,13 @@ namespace uwap.WebFramework.Plugins;
 public partial class MailPlugin : Plugin
 {
     [DataContract]
-    public class MailAddress
+    public class MailAddress(string address, string name)
     {
         [DataMember]
-        public readonly string Address;
+        public readonly string Address = address;
 
         [DataMember]
-        public readonly string Name;
-
-        public MailAddress(string address, string name)
-        {
-            Address = address;
-            Name = name;
-        }
+        public readonly string Name = name;
 
         public MailAddress(MailboxAddress ma)
             : this(ma.Address, ma.Name) { }

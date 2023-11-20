@@ -7,6 +7,8 @@ public partial class MailPlugin : Plugin
 {
     private readonly MailboxTable Mailboxes = MailboxTable.Import("Mail");
 
+    private static readonly IEnumerable<string> DefaultFolders = ["Inbox", "Sent", "Trash", "Spam"];
+
     /// <summary>
     /// The amount of messages to be listed at a time, and to be checked to determine if a mailbox/folder has unread messages.<br/>
     /// Default: 25
@@ -69,16 +71,15 @@ public partial class MailPlugin : Plugin
 
     private static IEnumerable<string> SortFolders(IEnumerable<string> folderNames)
     {
-        var def = new[] { "Inbox", "Sent", "Trash", "Spam" };
-        foreach (var f in def)
+        foreach (var f in DefaultFolders)
             yield return f;
-        foreach (var f in folderNames.Except(def).Order())
+        foreach (var f in folderNames.Except(DefaultFolders).Order())
             yield return f;
     }
 
     private static IEnumerable<KeyValuePair<string,SortedSet<ulong>>> SortFolders(Dictionary<string,SortedSet<ulong>> folders)
     {
-        var def = new[] { "Inbox", "Sent", "Trash", "Spam" }.Select(x => new KeyValuePair<string, SortedSet<ulong>>(x, folders[x]));
+        var def = DefaultFolders.Select(x => new KeyValuePair<string, SortedSet<ulong>>(x, folders[x]));
         foreach (var f in def)
             yield return f;
         foreach (var f in folders.Except(def).OrderBy(x => x.Key))
@@ -110,7 +111,7 @@ public partial class MailPlugin : Plugin
         return false;
     }
 
-    private bool InvalidMessage(IRequest req, [MaybeNullWhen(true)] out MailMessage message, [MaybeNullWhen(true)] out ulong messageId, Mailbox mailbox, bool acceptDraft = false)
+    private static bool InvalidMessage(IRequest req, [MaybeNullWhen(true)] out MailMessage message, [MaybeNullWhen(true)] out ulong messageId, Mailbox mailbox, bool acceptDraft = false)
     {
         if (!req.Query.TryGetValue("message", out var messageIdString))
         {
@@ -129,7 +130,7 @@ public partial class MailPlugin : Plugin
         return false;
     }
 
-    private bool InvalidFolder(IRequest req, [MaybeNullWhen(true)] out SortedSet<ulong> folder, [MaybeNullWhen(true)] out string folderName, Mailbox mailbox, ulong? messageId)
+    private static bool InvalidFolder(IRequest req, [MaybeNullWhen(true)] out SortedSet<ulong> folder, [MaybeNullWhen(true)] out string folderName, Mailbox mailbox, ulong? messageId)
     {
         if (!req.Query.TryGetValue("folder", out folderName))
         {
@@ -237,7 +238,7 @@ public partial class MailPlugin : Plugin
         return false;
     }
 
-    private bool InvalidMessage(AppRequest req, [MaybeNullWhen(true)] out MailMessage message, [MaybeNullWhen(true)] out ulong messageId, Mailbox mailbox, List<IPageElement> e)
+    private static bool InvalidMessage(AppRequest req, [MaybeNullWhen(true)] out MailMessage message, [MaybeNullWhen(true)] out ulong messageId, Mailbox mailbox, List<IPageElement> e)
     {
         if (!req.Query.TryGetValue("message", out var messageIdString))
         {
@@ -256,7 +257,7 @@ public partial class MailPlugin : Plugin
         return false;
     }
 
-    private bool InvalidFolder(AppRequest req, [MaybeNullWhen(true)] out SortedSet<ulong> folder, [MaybeNullWhen(true)] out string folderName, Mailbox mailbox, ulong? messageId, List<IPageElement> e)
+    private static bool InvalidFolder(AppRequest req, [MaybeNullWhen(true)] out SortedSet<ulong> folder, [MaybeNullWhen(true)] out string folderName, Mailbox mailbox, ulong? messageId, List<IPageElement> e)
     {
         if (!req.Query.TryGetValue("folder", out folderName))
         {

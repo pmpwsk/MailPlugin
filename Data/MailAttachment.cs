@@ -5,18 +5,12 @@ namespace uwap.WebFramework.Plugins;
 public partial class MailPlugin : Plugin
 {
     [DataContract]
-    public class MailAttachment
+    public class MailAttachment(string? name, string? mimeType)
     {
         [DataMember]
-        public readonly string? Name;
+        public readonly string? Name = name;
 
         [DataMember]
-        public readonly string? MimeType;
-
-        public MailAttachment(string? name, string? mimeType)
-        {
-            Name = name;
-            MimeType = mimeType;
-        }
+        public readonly string? MimeType = mimeType;
     }
 }

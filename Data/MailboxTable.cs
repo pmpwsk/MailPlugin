@@ -6,8 +6,8 @@ public partial class MailPlugin : Plugin
 {
     public class MailboxTable : Table<Mailbox>
     {
-        internal Dictionary<string,Dictionary<string,HashSet<Mailbox>>> UserAllowedMailboxes = new(); //first key=usertable.Name, second key=user.Id, value=list of allowed mailboxes
-        internal Dictionary<string,Mailbox> MailboxByAddress = new(); //key is the mail address, value is the mailbox
+        internal Dictionary<string,Dictionary<string,HashSet<Mailbox>>> UserAllowedMailboxes = []; //first key=usertable.Name, second key=user.Id, value=list of allowed mailboxes
+        internal Dictionary<string,Mailbox> MailboxByAddress = []; //key is the mail address, value is the mailbox
 
         private MailboxTable(string name) : base(name) { }
 
@@ -43,14 +43,14 @@ public partial class MailPlugin : Plugin
                 string userTable = kv.Key;
                 if (!access.TryGetValue(userTable, out var userTableDict))
                 {
-                    userTableDict = new();
+                    userTableDict = [];
                     access[userTable] = userTableDict;
                 }
                 foreach (string userId in kv.Value)
                 {
                     if (!userTableDict.TryGetValue(userId, out var userDict))
                     {
-                        userDict = new();
+                        userDict = [];
                         userTableDict[userId] = userDict;
                     }
                     userDict.Add(mailbox);
@@ -72,12 +72,12 @@ public partial class MailPlugin : Plugin
                         {
                             userDict.Remove(mailbox);
 
-                            if (!userDict.Any())
+                            if (userDict.Count == 0)
                                 userTableDict.Remove(userId);
                         }
                     }
 
-                    if (!userTableDict.Any())
+                    if (userTableDict.Count == 0)
                         access.Remove(userTable);
                 }
             }
@@ -114,7 +114,7 @@ public partial class MailPlugin : Plugin
 
         public void RebuildAccelerators()
         {
-            Dictionary<string, Dictionary<string, HashSet<Mailbox>>> access = new();
+            Dictionary<string, Dictionary<string, HashSet<Mailbox>>> access = [];
             foreach (var entry in Data.Values)
             {
                 AddToAccelerators(entry.Value, access, MailboxByAddress);

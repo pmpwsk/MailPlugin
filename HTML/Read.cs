@@ -9,13 +9,13 @@ public partial class MailPlugin : Plugin
     {
         HtmlDocument document = new();
         document.LoadHtml(code);
-        List<IContent> result = new();
+        List<IContent> result = [];
         foreach (var c in ReadHTML(document.DocumentNode))
             if (c != null)
                 result.Add(c);
-        while (result.Any() && result.First() is Paragraph p && (p.Text == "" || p.Text == "<br/>"))
+        while (result.Count != 0 && result.First() is Paragraph p && (p.Text == "" || p.Text == "<br/>"))
             result.RemoveAt(0);
-        while (result.Any() && result.Last() is Paragraph p && (p.Text == "" || p.Text == "<br/>"))
+        while (result.Count != 0 && result.Last() is Paragraph p && (p.Text == "" || p.Text == "<br/>"))
             result.RemoveAt(result.Count - 1);
         return result;
     }
@@ -87,14 +87,14 @@ public partial class MailPlugin : Plugin
             case "ul":
                 { //unordered list
                     var items = ReadItems(node.ChildNodes);
-                    if (items.Any())
+                    if (items.Count != 0)
                         yield return new BulletList(items);
                 }
                 break;
             case "ol":
                 { //ordered list
                     var items = ReadItems(node.ChildNodes);
-                    if (items.Any())
+                    if (items.Count != 0)
                         yield return new OrderedList(items, node.GetAttributeValue("type", "") switch
                         {
                             "A" => OrderedList.Types.LettersUppercase,
@@ -131,8 +131,16 @@ public partial class MailPlugin : Plugin
                             key = key.TrimEnd();
                             value = value.TrimStart();
                             string? unit = null;
-                            if (!new[] { "height", "width", "max-height", "max-width" }.Contains(key))
-                                continue;
+                            switch (key)
+                            {
+                                case "height":
+                                case "width":
+                                case "max-height":
+                                case "max-width":
+                                    break;
+                                default:
+                                    continue;
+                            }
                             foreach (var u in new[] { "cm", "mm", "in", "px", "pt", "pc", "rem", "em", "ex", "ch", "vw", "vh", "vmin", "vmax", "%" })
                                 if (value.EndsWith(u))
                                 {
@@ -245,17 +253,15 @@ public partial class MailPlugin : Plugin
 
     private static List<string> ReadItems(HtmlNodeCollection children)
     {
-        List<string> result = new();
+        List<string> result = [];
         foreach (var child in children)
             if (child.Name == "li")
             {
-                List<string> lines = new();
+                List<string> lines = [];
                 foreach (var c in ReadHTMLChildren(child.ChildNodes, true))
-                {
                     if (c is Paragraph p)
                         lines.Add(p.Text);
-                }
-                if (lines.Any())
+                if (lines.Count != 0)
                     result.Add(string.Join(' ', lines));
             }
         return result;

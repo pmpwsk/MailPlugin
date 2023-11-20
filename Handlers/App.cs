@@ -525,7 +525,7 @@ public partial class MailPlugin : Plugin
                     e.Add(new ContainerElement("New folder", new TextBox("Enter a name...", null, "name", onEnter: "Create()", autofocus: true)) { Button = new ButtonJS("Create", "Create()", "green")});
                     page.AddError();
                     foreach (var f in SortFolders(mailbox.Folders.Keys))
-                        if (new[] { "Inbox", "Sent", "Spam", "Trash" }.Contains(f))
+                        if (DefaultFolders.Contains(f))
                             e.Add(new ContainerElement(null, f));
                         else e.Add(new ContainerElement(null, f) { Button = new ButtonJS("Delete", $"Delete('{HttpUtility.UrlEncode(f)}', '{f.ToId()}')", "red", id: f.ToId()) });
                 }

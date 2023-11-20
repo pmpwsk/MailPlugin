@@ -55,7 +55,7 @@ public partial class MailPlugin : Plugin
                 catch
                 {
                     foreach (var kv in IncomingListeners)
-                        if (kv.Value.Remove(listenerKKV.Key) && !kv.Value.Any())
+                        if (kv.Value.Remove(listenerKKV.Key) && kv.Value.Count == 0)
                             IncomingListeners.Remove(kv.Key);
                 }
         log = "Sent internally.";
@@ -83,7 +83,7 @@ public partial class MailPlugin : Plugin
         IEnumerable<MailboxAddress> mailboxes = message.To.Mailboxes.Union(message.Cc.Mailboxes).Union(message.Bcc.Mailboxes).Where(x => Mailboxes.MailboxByAddress.ContainsKey(x.Address));
         if (mailboxes.Any())
         {
-            List<string> log = new();
+            List<string> log = [];
             FullResult authResult = CheckEverything(connectionData, message, log);
             List<MailAttachment> attachments = message.Attachments.Select(x => new MailAttachment(x.ContentDisposition.FileName, x.ContentType.MimeType)).ToList();
             MailMessage mail = new(true, DateTime.UtcNow, message, attachments, authResult, log);
@@ -122,7 +122,7 @@ public partial class MailPlugin : Plugin
                         catch
                         {
                             foreach (var kv in IncomingListeners)
-                                if (kv.Value.Remove(listenerKKV.Key) && !kv.Value.Any())
+                                if (kv.Value.Remove(listenerKKV.Key) && kv.Value.Count == 0)
                                     IncomingListeners.Remove(kv.Key);
                         }
             }

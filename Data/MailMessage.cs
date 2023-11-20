@@ -72,15 +72,15 @@ public partial class MailPlugin : Plugin
             TimestampUtc = timestampUtc;
             From = new(mailGen.From);
             To = mailGen.To.Select(x => new MailAddress(x)).ToList();
-            Cc = new();
-            Bcc = new();
+            Cc = [];
+            Bcc = [];
             ReplyTo = null;
             MessageId = messageId;
             InReplyToId = mailGen.IsReplyToMessageId;
             Subject = mailGen.Subject;
             Attachments = mailGen.Attachments.Select(x => new MailAttachment(x.Name, x.ContentType)).ToList();
             AuthResult = null;
-            Log = new() { "Received internally." };
+            Log = ["Received internally."];
         }
 
         public MailMessage(MailAddress from, List<MailAddress> to, string subject, string? inReplyToId)
@@ -89,15 +89,15 @@ public partial class MailPlugin : Plugin
             TimestampUtc = DateTime.UtcNow;
             From = from;
             To = to;
-            Cc = new();
-            Bcc = new();
+            Cc = [];
+            Bcc = [];
             ReplyTo = null;
             MessageId = "none";
             InReplyToId = inReplyToId;
             Subject = subject;
-            Attachments = new();
+            Attachments = [];
             AuthResult = null;
-            Log = new();
+            Log = [];
         }
     }
 }

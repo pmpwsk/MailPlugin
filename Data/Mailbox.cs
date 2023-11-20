@@ -43,19 +43,19 @@ public partial class MailPlugin : Plugin
             Id = id;
             Address = address;
             Name = null;
-            AllowedUserIds = new();
-            Messages = new();
+            AllowedUserIds = [];
+            Messages = [];
             Folders = new()
             {
-                { "Inbox", new() },
-                { "Sent", new() },
-                { "Trash", new() },
-                { "Spam", new() }
+                { "Inbox", [] },
+                { "Sent", [] },
+                { "Trash", [] },
+                { "Spam", [] }
             };
-            Contacts = new();
-            BlockedAddresses = new();
+            Contacts = [];
+            BlockedAddresses = [];
             AuthRequirements = new();
-            CustomSettings = new();
+            CustomSettings = [];
         }
     }
 }

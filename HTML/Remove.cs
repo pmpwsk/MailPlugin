@@ -8,7 +8,7 @@ public partial class MailPlugin : Plugin
     {
         HtmlDocument document = new();
         document.LoadHtml(code);
-        List<string> result = new();
+        List<string> result = [];
         foreach (var c in RemoveHTML(document.DocumentNode))
         {
             if (c == null)
@@ -93,7 +93,7 @@ public partial class MailPlugin : Plugin
                     {
                         if (inner == "")
                             inner = "link without text";
-                        if (IsFullHttpUrl(href, out var description) || (href.SplitAtFirst(':', out description, out _) && description != "javascript"))
+                        if (IsFullHttpUrl(href, out _) || (href.SplitAtFirst(':', out var description, out _) && description != "javascript"))
                             yield return new Paragraph($"[{inner.HtmlSafe()}]({href})");
                     }
                 }
@@ -101,14 +101,14 @@ public partial class MailPlugin : Plugin
             case "ul":
                 { //unordered list
                     var items = RemoveHTMLItems(node.ChildNodes);
-                    if (items.Any())
+                    if (items.Count != 0)
                         yield return new BulletList(items);
                 }
                 break;
             case "ol":
                 { //ordered list
                     var items = RemoveHTMLItems(node.ChildNodes);
-                    if (items.Any())
+                    if (items.Count != 0)
                         yield return new OrderedList(items, node.GetAttributeValue("type", "") switch
                         {
                             "A" => OrderedList.Types.LettersUppercase,
@@ -220,17 +220,15 @@ public partial class MailPlugin : Plugin
 
     private static List<string> RemoveHTMLItems(HtmlNodeCollection children)
     {
-        List<string> result = new();
+        List<string> result = [];
         foreach (var child in children)
             if (child.Name == "li")
             {
-                List<string> lines = new();
+                List<string> lines = [];
                 foreach (var c in RemoveHTMLChildren(child.ChildNodes, true))
-                {
                     if (c is Paragraph p)
                         lines.Add(p.Text);
-                }
-                if (lines.Any())
+                if (lines.Count != 0)
                     result.Add(string.Join(' ', lines));
             }
         return result;

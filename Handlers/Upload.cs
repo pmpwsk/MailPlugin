@@ -23,7 +23,7 @@ public partial class MailPlugin : Plugin
                     }
                     else
                     {
-                        message = new(new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address), new(), "", null);
+                        message = new(new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address), [], "", null);
                         mailbox.Messages[0] = message;
                     }
                     Directory.CreateDirectory($"../Mail/{mailbox.Id}/0");
