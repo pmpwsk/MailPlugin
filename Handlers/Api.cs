@@ -356,7 +356,8 @@ public partial class MailPlugin : Plugin
                         break;
                     }
                     mailbox.Lock();
-                    mailbox.Messages[0] = new(new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address), [message.From], (message.Subject.ToLower().StartsWith("re:") ? "" : "Re: ") + message.Subject, message.MessageId);
+                    string subjectLower = message.Subject.ToLower();
+                    mailbox.Messages[0] = new(new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address), [message.From], (subjectLower.StartsWith("re:") || subjectLower.StartsWith("aw:") ? "" : "Re: ") + message.Subject, message.MessageId);
                     Directory.CreateDirectory($"../Mail/{mailbox.Id}/0");
                     File.WriteAllText($"../Mail/{mailbox.Id}/0/text", "");
                     mailbox.UnlockSave();
