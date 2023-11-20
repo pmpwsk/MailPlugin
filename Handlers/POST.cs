@@ -43,15 +43,15 @@ public partial class MailPlugin : Plugin
                     if (message != null)
                     {
                         message.To = to.Select(x => new MailAddress(x, x)).ToList();
-                        message.Subject = subject;
+                        message.Subject = subject.Trim();
                     }
                     else
                     {
-                        mailbox.Messages[0] = new(new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address), to.Select(x => new MailAddress(x, x)).ToList(), subject, null);
+                        mailbox.Messages[0] = new(new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address), to.Select(x => new MailAddress(x, x)).ToList(), subject.Trim(), null);
                     }
 
                     WriteText:
-                    string text = await req.GetBodyText();
+                    string text = (await req.GetBodyText()).Trim();
                     Directory.CreateDirectory($"../Mail/{mailbox.Id}/0");
                     File.WriteAllText($"../Mail/{mailbox.Id}/0/text", text);
 
