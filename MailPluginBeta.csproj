@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="HtmlAgilityPack" Version="1.11.54" />
+    <PackageReference Include="IPAddressRange" Version="6.0.0" />
+    <PackageReference Include="Portable.BouncyCastle" Version="1.9.0">
+		<Aliases>PortableBouncyCastle</Aliases>
+	</PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Web\WebFramework\WebFramework.csproj" />
+  </ItemGroup>
+
+</Project>
