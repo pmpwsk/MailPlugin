@@ -63,6 +63,17 @@ public partial class MailPlugin : Plugin
         }
     }
 
+    private static string Before(string value, string separator)
+    {
+        int num = value.IndexOf(separator);
+        if (num == -1)
+        {
+            return value;
+        }
+
+        return value.Remove(num);
+    }
+
     /// <summary>
     /// Adds an s to the unit if the count isn't 1.
     /// </summary>
