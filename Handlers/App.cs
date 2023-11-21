@@ -369,8 +369,9 @@ public partial class MailPlugin : Plugin
                     {
                         inputs.Add(new TextBox("Recipient(s)...", to, "to", TextBoxRole.Email, autofocus: true, onInput: "MessageChanged()"));
                         inputs.Add(new TextBox("Subject...", subject, "subject", onInput: "MessageChanged()"));
+                        inputs.Add(new TextArea("Message...", text, "text", onInput: "MessageChanged(); Resize()"));
                     }
-                    inputs.Add(new TextArea("Message...", text, "text", onInput: "MessageChanged(); Resize()"));
+                    else inputs.Add(new TextArea("Message...", text, "text", autofocus: true, onInput: "MessageChanged(); Resize()"));
                     e.Add(new LargeContainerElement(null, inputs, id: "e3"));
                     int attachmentCount = message == null ? 0 : message.Attachments.Count;
                     e.Add(new ButtonElementJS(null, $"Attachments ({attachmentCount})", "GoToAttachments()", id: "e4"));
