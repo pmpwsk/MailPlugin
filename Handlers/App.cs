@@ -437,7 +437,7 @@ public partial class MailPlugin : Plugin
                     string messagePath = $"../Mail/{mailbox.Id}/0/";
                     string? c = null;
                     if (File.Exists(messagePath + "text"))
-                        c = AddHTML(File.ReadAllText(messagePath + "text"));
+                        c = AddHTML(File.ReadAllText(messagePath + "text").Trim());
                     List<IContent>? textContents = c == null ? null : ReadHTML(c);
                     if (textContents == null || (textContents.Count == 1 && textContents.First() is Paragraph p && (p.Text == "" || p.Text == "<br/>")))
                         e.Add(new ContainerElement("No text attached!", "", "red"));

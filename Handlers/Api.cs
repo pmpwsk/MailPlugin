@@ -237,7 +237,7 @@ public partial class MailPlugin : Plugin
                         await req.Write("invalid-to");
                         break;
                     }
-                    string text = File.Exists($"../Mail/{mailbox.Id}/0/text") ? File.ReadAllText($"../Mail/{mailbox.Id}/0/text") : "";
+                    string text = File.Exists($"../Mail/{mailbox.Id}/0/text") ? File.ReadAllText($"../Mail/{mailbox.Id}/0/text").Trim() : "";
                     if (text == "")
                     {
                         await req.Write("invalid-text");

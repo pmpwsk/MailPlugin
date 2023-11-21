@@ -51,7 +51,7 @@ public partial class MailPlugin : Plugin
                     }
 
                     WriteText:
-                    string text = (await req.GetBodyText()).Trim();
+                    string text = (await req.GetBodyText());
                     Directory.CreateDirectory($"../Mail/{mailbox.Id}/0");
                     File.WriteAllText($"../Mail/{mailbox.Id}/0/text", text);
 
