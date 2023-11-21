@@ -348,7 +348,7 @@ public partial class MailPlugin : Plugin
                 break;
             case "/reply":
                 {
-                    if (InvalidMailboxOrMessageOrFolder(req, out var mailbox, out var message, out _, out _, out var folderName))
+                    if (InvalidMailboxOrMessageOrFolder(req, out var mailbox, out var message, out var messageId, out _, out var folderName))
                         break;
                     if (folderName == "Sent")
                     {
@@ -356,12 +356,20 @@ public partial class MailPlugin : Plugin
                         break;
                     }
                     mailbox.Lock();
+                    string? text = null;
+                    string messagePath = $"../Mail/{mailbox.Id}/{messageId}/";
+                    if (File.Exists(messagePath + "html"))
+                        text = File.ReadAllText(messagePath + "html");
+                    if (text == null && File.Exists(messagePath + "text"))
+                        text = AddHTML(File.ReadAllText(messagePath + "text").HtmlSafe());
+                    if (text != null)
+                        text = $"\n\n\n# Original message:\n# From: {message.From.FullString}\n# Time: {DateTimeString(message.TimestampUtc)} UTC\n\n\n{QuoteHTML(Before(text, "# Original message:").TrimEnd())}";
                     string subject = message.Subject.Trim();
                     while (subject.SplitAtFirst(':', out var subjectPrefix, out var realSubject) && subjectPrefix.All(char.IsLetter) && (subjectPrefix.Length == 2 || subjectPrefix.Length == 3) && realSubject.TrimStart() != "")
                         subject = realSubject.TrimStart();
                     mailbox.Messages[0] = new(new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address), [message.From], "Re: " + subject, message.MessageId);
                     Directory.CreateDirectory($"../Mail/{mailbox.Id}/0");
-                    File.WriteAllText($"../Mail/{mailbox.Id}/0/text", "");
+                    File.WriteAllText($"../Mail/{mailbox.Id}/0/text", text ?? "");
                     mailbox.UnlockSave();
                 }
                 break;
