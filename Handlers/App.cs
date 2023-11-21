@@ -319,11 +319,16 @@ public partial class MailPlugin : Plugin
                     if (mailbox.Messages.TryGetValue(0, out var message))
                     {
                         to = string.Join(';', message.To.Select(x => x.Address));
-                        if (to == "") to = null;
+                        if (to == "")
+                            to = null;
                         subject = message.Subject;
-                        if (subject == "") subject = null;
+                        if (subject == "")
+                            subject = null;
                         text = File.Exists($"../Mail/{mailbox.Id}/0/text") ? File.ReadAllText($"../Mail/{mailbox.Id}/0/text") : null;
-                        if (text == "") text = null;
+                        if (text == "")
+                            text = null;
+                        if (text != null && text.StartsWith('\n'))
+                            text = '\n' + text;
                     }
                     else
                     {
