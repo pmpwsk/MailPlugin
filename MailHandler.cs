@@ -131,7 +131,7 @@ public partial class MailPlugin : Plugin
         {
             MailboxAddress to = message.To.Mailboxes.FirstOrDefault() ?? new("NO RECIPIENT", "null@example.com");
             Console.WriteLine();
-            Console.WriteLine($"UNRECOGNIZED MAIL (Secure={connectionData.Secure}, Host={connectionData.IP.Address}) '{message.Subject}' from {from.Name} ({from.Address}) to {to.Name} ({to.Address})");
+            Console.WriteLine($"UNRECOGNIZED MAIL (Secure={connectionData.Secure}, Host={connectionData.IP.Address}) '{message.Subject??"[no subject]"}' from {from.Name} ({from.Address}) to {to.Name} ({to.Address})");
             if (message.TextBody != null)
             {
                 Console.WriteLine("TEXT:");
