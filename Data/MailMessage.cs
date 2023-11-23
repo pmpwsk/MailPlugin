@@ -60,7 +60,8 @@ public partial class MailPlugin : Plugin
             ReplyTo = message.ReplyTo.Mailboxes.Any() ? new(message.ReplyTo.Mailboxes.First()) : null;
             MessageId = message.MessageId;
             InReplyToId = message.InReplyTo;
-            Subject = message.Subject ?? "[no subject]";
+            string? subject = message.Subject?.Trim();
+            Subject = string.IsNullOrEmpty(subject) ? "[no subject]" : subject;
             Attachments = attachments;
             AuthResult = authResult;
             Log = log;
