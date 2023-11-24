@@ -327,8 +327,6 @@ public partial class MailPlugin : Plugin
                         text = File.Exists($"../Mail/{mailbox.Id}/0/text") ? File.ReadAllText($"../Mail/{mailbox.Id}/0/text") : null;
                         if (text == "")
                             text = null;
-                        if (text != null && text.StartsWith('\n'))
-                            text = '\n' + text;
                     }
                     else
                     {
