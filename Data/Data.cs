@@ -17,9 +17,9 @@ public partial class MailPlugin : Plugin
 
     /// <summary>
     /// Whether to print incoming mail messages to the console if no matching mailbox was found for them.<br/>
-    /// Default: true
+    /// Default: false
     /// </summary>
-    public bool PrintUnrecognizedToConsole = true;
+    public bool PrintUnrecognizedToConsole = false;
 
     /// <summary>
     /// Whether to attempt to send emails to recipients that aren't present in the database, but have a domain that is present in it, externally.<br/>
