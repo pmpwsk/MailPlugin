@@ -95,8 +95,7 @@ public partial class MailPlugin : Plugin
                 while (mailbox.Messages.ContainsKey(messageId))
                     messageId++;
                 mailbox.Messages[messageId] = mail;
-                bool happy = connectionData.Secure && mailbox.AuthRequirements.SatisfiedBy(authResult);
-                mailbox.Folders[happy ? "Inbox" : "Spam"].Add(messageId);
+                mailbox.Folders[mailbox.AuthRequirements.SatisfiedBy(authResult) ? "Inbox" : "Spam"].Add(messageId);
                 mailbox.UnlockSave();
                 Directory.CreateDirectory($"../Mail/{mailbox.Id}/{messageId}");
                 if (message.TextBody != null)
