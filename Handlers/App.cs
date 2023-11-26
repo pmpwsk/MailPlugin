@@ -227,6 +227,7 @@ public partial class MailPlugin : Plugin
 
                         page.Navigation.Add(new Button("Back", PathWithoutQueries(req, "message", "view", "offset"), "right"));
                         page.Title = $"{message.Subject} ({mailbox.Address})";
+                        page.Scripts.Add(IncomingScript(req, LastInboxMessageId(mailbox), pathPrefix));
                         page.Scripts.Add(new Script(pathPrefix + "/query.js"));
                         page.Scripts.Add(new Script(pathPrefix + "/message.js"));
                         page.Sidebar.Add(new ButtonElement("Messages:", null, PathWithoutQueries(req, "message", "view", "offset")));
