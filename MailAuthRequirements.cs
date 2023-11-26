@@ -8,33 +8,12 @@ public partial class MailPlugin : Plugin
     [DataContract]
     public class MailAuthRequirements
     {
-        [DataMember]
-        public bool Secure;
-
-        [DataMember]
-        public bool PTR;
-
-        [DataMember]
-        public bool SatisfiedByDMARC;
-
-        [DataMember]
-        public MailAuthVerdictSPF SPF;
-
-        [DataMember]
-        public MailAuthVerdictDKIM DKIM;
-
-        [DataMember]
-        public MailAuthVerdictDMARC DMARC;
-
-        public MailAuthRequirements()
-        {
-            Secure = true;
-            PTR = true;
-            SatisfiedByDMARC = true;
-            SPF = MailAuthVerdictSPF.Unset;
-            DKIM = MailAuthVerdictDKIM.Unset;
-            DMARC = MailAuthVerdictDMARC.Unset;
-        }
+        [DataMember] public bool Secure = true;
+        [DataMember] public bool PTR = true;
+        [DataMember] public bool SatisfiedByDMARC = true;
+        [DataMember] public MailAuthVerdictSPF SPF = MailAuthVerdictSPF.Unset;
+        [DataMember] public MailAuthVerdictDKIM DKIM = MailAuthVerdictDKIM.Unset;
+        [DataMember] public MailAuthVerdictDMARC DMARC = MailAuthVerdictDMARC.Unset;
 
         public bool SatisfiedBy(FullResult result)
             => (result.Secure || !Secure)
