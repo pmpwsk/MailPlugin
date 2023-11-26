@@ -17,8 +17,8 @@ public partial class MailPlugin : Plugin
 
         public bool SatisfiedBy(FullResult result)
             => (result.Secure || !Secure)
-            && result.SPF >= SPF
-            && result.DKIM >= DKIM
-            && result.DMARC >= DMARC;
+            && (result.PTR != null || !PTR)
+            && ((SatisfiedByDMARC && result.DMARC == MailAuthVerdictDMARC.Pass)
+                || (result.SPF >= SPF && result.DKIM >= DKIM && result.DMARC >= DMARC));
     }
 }
