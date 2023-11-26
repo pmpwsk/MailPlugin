@@ -237,9 +237,16 @@ public partial class MailPlugin : Plugin
                         if (offset > 0)
                             page.Sidebar.Add(new ButtonElement(null, "Newer messages", $"{PathWithoutQueries(req, "offset")}&offset={Math.Max(offset - MessagePreloadCount, 0)}"));
                         string offsetQuery = offset == 0 ? "" : $"&offset={offset}";
+                        bool anyUnread = false;
                         foreach (var mId in GetLastReversed(folder, MessagePreloadCount, offset))
                             if (mailbox.Messages.TryGetValue(mId, out var m))
+                            {
+                                if (m.Unread)
+                                    anyUnread = true;
                                 page.Sidebar.Add(new ButtonElement(null, $"{m.From.FullString}:<br/>{m.Subject}", $"{pluginHome}?mailbox={mailboxId}&folder={HttpUtility.UrlEncode(folderName)}&message={mId}{offsetQuery}", m.Unread ? "red" : null));
+                            }
+                        if (anyUnread)
+                            page.Favicon = pathPrefix + "/icon-red.ico";
                         if (offset + MessagePreloadCount < folder.Count)
                             page.Sidebar.Add(new ButtonElement(null, "Older messages", $"{PathWithoutQueries(req, "offset")}&offset={offset + MessagePreloadCount}"));
                         HighlightSidebar(page, req, "view");
