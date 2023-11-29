@@ -517,6 +517,7 @@ public partial class MailPlugin : Plugin
                     e.Add(new LargeContainerElement("Mail settings", mailbox.Address));
                     page.AddError();
                     e.Add(new ButtonElement("Folders", null, $"{pathPrefix}/settings/folders?mailbox={mailbox.Id}"));
+                    e.Add(new ButtonElement("Authentication", null, $"{pathPrefix}/settings/auth?mailbox={mailbox.Id}"));
                     e.Add(new ContainerElement("Name", new TextBox("Enter a name...", mailbox.Name, "name-input", onEnter: "SaveName()", onInput: "NameChanged()")) { Button = new ButtonJS("Saved!", "SaveName()", id: "save-name") });
                 }
                 break;
