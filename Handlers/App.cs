@@ -1,6 +1,7 @@
 ﻿using System.Web;
 using uwap.WebFramework.Accounts;
 using uwap.WebFramework.Elements;
+using static uwap.WebFramework.Mail.MailAuth;
 
 namespace uwap.WebFramework.Plugins;
 
@@ -541,6 +542,50 @@ public partial class MailPlugin : Plugin
                         if (DefaultFolders.Contains(f))
                             e.Add(new ContainerElement(null, f));
                         else e.Add(new ContainerElement(null, f) { Button = new ButtonJS("Delete", $"Delete('{HttpUtility.UrlEncode(f)}', '{f.ToId()}')", "red", id: f.ToId()) });
+                }
+                break;
+            case "/settings/auth":
+                {
+                    if (InvalidMailbox(req, out var mailbox, e))
+                        break;
+                    page.Navigation.Add(new Button("Back", $"{pathPrefix}/settings?mailbox={mailbox.Id}", "right"));
+                    page.Title = "Mail authentication";
+                    page.Scripts.Add(new Script(pathPrefix + "/query.js"));
+                    page.Scripts.Add(new Script(pathPrefix + "/settings-auth.js"));
+                    page.Sidebar.Add(new ButtonElement("Mailboxes:", null, pluginHome));
+                    foreach (var m in (Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : [])
+                        .OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@')))
+                        page.Sidebar.Add(new ButtonElement(null, m.Address, $"{pathPrefix}/settings/auth?mailbox={m.Id}"));
+                    HighlightSidebar(page, req);
+                    e.Add(new LargeContainerElement("Mail authentication", new List<IContent> { new Paragraph(mailbox.Address), new Paragraph("If a message does not satisfy these requirements, it will be placed in your spam folder.") }));
+                    var ar = mailbox.AuthRequirements;
+                    e.Add(new ContainerElement(null,
+                    [
+                        new Heading("Connection:"),
+                        new Checkbox("Require secure connection", "connection-secure", ar.Secure),
+                        new Checkbox("Require PTR record", "connection-ptr", ar.PTR),
+                        new Heading("SPF:"),
+                        new Selector("spf-min", ar.SPF.ToString(),
+                            MailAuthVerdictSPF.HardFail.ToString(),
+                            MailAuthVerdictSPF.SoftFail.ToString(),
+                            MailAuthVerdictSPF.Unset.ToString(),
+                            MailAuthVerdictSPF.Pass.ToString()),
+                        new Heading("DKIM:"),
+                        new Selector("dkim-min", ar.DKIM.ToString(),
+                            MailAuthVerdictDKIM.Fail.ToString(),
+                            MailAuthVerdictDKIM.Mixed.ToString(),
+                            MailAuthVerdictDKIM.Unset.ToString(),
+                            MailAuthVerdictDKIM.Pass.ToString()),
+                        new Heading("DMARC:"),
+                        new Checkbox("Always satisfied by DMARC pass", "dmarc-enough", ar.SatisfiedByDMARC),
+                        new Selector("dmarc-min", ar.DMARC.ToString(),
+                            MailAuthVerdictDMARC.FailWithReject.ToString(),
+                            MailAuthVerdictDMARC.FailWithQuarantine.ToString(),
+                            MailAuthVerdictDMARC.FailWithoutAction.ToString(),
+                            MailAuthVerdictDMARC.Unset.ToString(),
+                            MailAuthVerdictDMARC.Pass.ToString())
+                    ])
+                    { Button = new ButtonJS("Saved!", "Save()", id: "save") });
                 }
                 break;
             case "/manage":
