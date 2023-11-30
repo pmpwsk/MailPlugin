@@ -557,7 +557,12 @@ public partial class MailPlugin : Plugin
                         .OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@')))
                         page.Sidebar.Add(new ButtonElement(null, m.Address, $"{pathPrefix}/settings/auth?mailbox={m.Id}"));
                     HighlightSidebar(page, req);
-                    e.Add(new LargeContainerElement("Mail authentication", new List<IContent> { new Paragraph(mailbox.Address), new Paragraph("If a message does not satisfy these requirements, it will be placed in your spam folder.") })
+                    e.Add(new LargeContainerElement("Mail authentication",
+                    [
+                        new Paragraph(mailbox.Address),
+                        new Paragraph("Selectors set what the lowest acceptable result is."),
+                        new Paragraph("If a message does not satisfy these requirements, it will be placed in your spam folder.")
+                    ])
                     { Button = new ButtonJS("Saved!", "Save()", id: "save") });
                     var ar = mailbox.AuthRequirements;
                     e.Add(new ContainerElement("Connection",
