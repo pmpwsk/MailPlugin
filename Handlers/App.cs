@@ -557,26 +557,32 @@ public partial class MailPlugin : Plugin
                         .OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@')))
                         page.Sidebar.Add(new ButtonElement(null, m.Address, $"{pathPrefix}/settings/auth?mailbox={m.Id}"));
                     HighlightSidebar(page, req);
-                    e.Add(new LargeContainerElement("Mail authentication", new List<IContent> { new Paragraph(mailbox.Address), new Paragraph("If a message does not satisfy these requirements, it will be placed in your spam folder.") }));
+                    e.Add(new LargeContainerElement("Mail authentication", new List<IContent> { new Paragraph(mailbox.Address), new Paragraph("If a message does not satisfy these requirements, it will be placed in your spam folder.") })
+                    { Button = new ButtonJS("Saved!", "Save()", id: "save") });
                     var ar = mailbox.AuthRequirements;
-                    e.Add(new ContainerElement(null,
+                    e.Add(new ContainerElement("Connection",
                     [
-                        new Heading("Connection:"),
                         new Checkbox("Require secure connection", "connection-secure", ar.Secure),
-                        new Checkbox("Require PTR record", "connection-ptr", ar.PTR),
-                        new Heading("SPF:"),
+                        new Checkbox("Require PTR record", "connection-ptr", ar.PTR)
+                    ]));
+                    e.Add(new ContainerElement("SPF",
+                    [
                         new Selector("spf-min", ar.SPF.ToString(),
                             MailAuthVerdictSPF.HardFail.ToString(),
                             MailAuthVerdictSPF.SoftFail.ToString(),
                             MailAuthVerdictSPF.Unset.ToString(),
-                            MailAuthVerdictSPF.Pass.ToString()),
-                        new Heading("DKIM:"),
+                            MailAuthVerdictSPF.Pass.ToString())
+                    ]));
+                    e.Add(new ContainerElement("DKIM",
+                    [
                         new Selector("dkim-min", ar.DKIM.ToString(),
                             MailAuthVerdictDKIM.Fail.ToString(),
                             MailAuthVerdictDKIM.Mixed.ToString(),
                             MailAuthVerdictDKIM.Unset.ToString(),
-                            MailAuthVerdictDKIM.Pass.ToString()),
-                        new Heading("DMARC:"),
+                            MailAuthVerdictDKIM.Pass.ToString())
+                    ]));
+                    e.Add(new ContainerElement("DMARC",
+                    [
                         new Checkbox("Always satisfied by DMARC pass", "dmarc-enough", ar.SatisfiedByDMARC),
                         new Selector("dmarc-min", ar.DMARC.ToString(),
                             MailAuthVerdictDMARC.FailWithReject.ToString(),
@@ -584,8 +590,7 @@ public partial class MailPlugin : Plugin
                             MailAuthVerdictDMARC.FailWithoutAction.ToString(),
                             MailAuthVerdictDMARC.Unset.ToString(),
                             MailAuthVerdictDMARC.Pass.ToString())
-                    ])
-                    { Button = new ButtonJS("Saved!", "Save()", id: "save") });
+                    ]));
                 }
                 break;
             case "/manage":
