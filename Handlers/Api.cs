@@ -2,6 +2,7 @@
 using System.Web;
 using uwap.WebFramework.Accounts;
 using uwap.WebFramework.Mail;
+using static uwap.WebFramework.Mail.MailAuth;
 
 namespace uwap.WebFramework.Plugins;
 
@@ -465,6 +466,32 @@ public partial class MailPlugin : Plugin
                     }
                     ulong messageId = messageKV.Key;
                     await req.Write($"mailbox={mailbox.Id}&folder={HttpUtility.UrlEncode(mailbox.Folders.First(x => x.Value.Contains(messageId)).Key)}&message={messageId}");
+                }
+                break;
+            case "/set-auth":
+                {
+                    if (InvalidMailbox(req, out var mailbox))
+                        break;
+                    if (req.Query.TryGetValue("connection-secure", out string? connectionSecureS) && req.Query.TryGetValue("connection-ptr", out string? connectionPtrS)
+                        && req.Query.TryGetValue("spf-min", out string? spfMinS)
+                        && req.Query.TryGetValue("dkim-min", out string? dkimMinS)
+                        && req.Query.TryGetValue("dmarc-enough", out string? dmarcEnoughS) && req.Query.TryGetValue("dmarc-min", out string? dmarcMinS)
+                        && bool.TryParse(connectionSecureS, out bool connectionSecure) && bool.TryParse(connectionPtrS, out bool connectionPtr)
+                        && Enum.TryParse<MailAuthVerdictSPF>(spfMinS, out var spfMin)
+                        && Enum.TryParse<MailAuthVerdictDKIM>(dkimMinS, out var dkimMin)
+                        && bool.TryParse(dmarcEnoughS, out bool dmarcEnough) && Enum.TryParse<MailAuthVerdictDMARC>(dmarcMinS, out var dmarcMin))
+                    {
+                        mailbox.Lock();
+                        var ar = mailbox.AuthRequirements;
+                        ar.Secure = connectionSecure;
+                        ar.PTR = connectionPtr;
+                        ar.SPF = spfMin;
+                        ar.DKIM = dkimMin;
+                        ar.SatisfiedByDMARC = dmarcEnough;
+                        ar.DMARC = dmarcMin;
+                        mailbox.UnlockSave();
+                    }
+                    else req.Status = 400;
                 }
                 break;
             default:
