@@ -564,6 +564,7 @@ public partial class MailPlugin : Plugin
                         new Paragraph("If a message does not satisfy these requirements, it will be placed in your spam folder.")
                     ])
                     { Button = new ButtonJS("Saved!", "Save()", id: "save") });
+                    page.AddError();
                     var ar = mailbox.AuthRequirements;
                     e.Add(new ContainerElement("Connection",
                     [
