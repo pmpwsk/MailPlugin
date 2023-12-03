@@ -568,8 +568,10 @@ public partial class MailPlugin : Plugin
                     var ar = mailbox.AuthRequirements;
                     e.Add(new ContainerElement("Connection",
                     [
-                        new Checkbox("Require secure connection", "connection-secure", ar.Secure),
+                        new Checkbox("Require secure connection", "connection-secure", ar.Secure)
+                        { OnChange = "Changed()" },
                         new Checkbox("Require PTR record", "connection-ptr", ar.PTR)
+                        { OnChange = "Changed()" }
                     ]));
                     e.Add(new ContainerElement("SPF",
                     [
@@ -578,6 +580,7 @@ public partial class MailPlugin : Plugin
                             MailAuthVerdictSPF.SoftFail.ToString(),
                             MailAuthVerdictSPF.Unset.ToString(),
                             MailAuthVerdictSPF.Pass.ToString())
+                        { OnChange = "Changed()" }
                     ]));
                     e.Add(new ContainerElement("DKIM",
                     [
@@ -586,16 +589,19 @@ public partial class MailPlugin : Plugin
                             MailAuthVerdictDKIM.Mixed.ToString(),
                             MailAuthVerdictDKIM.Unset.ToString(),
                             MailAuthVerdictDKIM.Pass.ToString())
+                        { OnChange = "Changed()" }
                     ]));
                     e.Add(new ContainerElement("DMARC",
                     [
-                        new Checkbox("Always satisfied by DMARC pass", "dmarc-enough", ar.SatisfiedByDMARC),
+                        new Checkbox("Always satisfied by DMARC pass", "dmarc-enough", ar.SatisfiedByDMARC)
+                        { OnChange = "Changed()" },
                         new Selector("dmarc-min", ar.DMARC.ToString(),
                             MailAuthVerdictDMARC.FailWithReject.ToString(),
                             MailAuthVerdictDMARC.FailWithQuarantine.ToString(),
                             MailAuthVerdictDMARC.FailWithoutAction.ToString(),
                             MailAuthVerdictDMARC.Unset.ToString(),
                             MailAuthVerdictDMARC.Pass.ToString())
+                        { OnChange = "Changed()" }
                     ]));
                 }
                 break;
