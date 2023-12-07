@@ -449,6 +449,21 @@ public partial class MailPlugin : Plugin
                     mailbox.UnlockSave();
                 }
                 break;
+            case "/set-footer":
+                {
+                    if (InvalidMailbox(req, out var mailbox))
+                        break;
+                    if (!req.Query.TryGetValue("footer", out var footer))
+                    {
+                        req.Status = 400;
+                        break;
+                    }
+                    if (footer == "") footer = null;
+                    mailbox.Lock();
+                    mailbox.Footer = footer;
+                    mailbox.UnlockSave();
+                }
+                break;
             case "/find":
                 {
                     if (InvalidMailbox(req, out var mailbox))
