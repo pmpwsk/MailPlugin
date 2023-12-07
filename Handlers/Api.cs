@@ -365,6 +365,7 @@ public partial class MailPlugin : Plugin
                         text = AddHTML(File.ReadAllText(messagePath + "text").HtmlSafe());
                     if (text != null)
                         text = $"\n\n\n# Original message:\n# From: {message.From.FullString}\n# Time: {DateTimeString(message.TimestampUtc)} UTC\n\n\n{QuoteHTML(Before(text, "# Original message:").TrimEnd())}";
+                    else text = "";
                     string subject = message.Subject.Trim();
                     while (subject.SplitAtFirst(':', out var subjectPrefix, out var realSubject) && subjectPrefix.All(char.IsLetter) && (subjectPrefix.Length == 2 || subjectPrefix.Length == 3) && realSubject.TrimStart() != "")
                         subject = realSubject.TrimStart();
