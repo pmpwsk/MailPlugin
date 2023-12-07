@@ -30,7 +30,7 @@ public partial class MailPlugin : Plugin
                     var file = req.Files[0];
                     int attachmentId = message.Attachments.Count;
                     if (file.Download($"../Mail/{mailbox.Id}/0/{attachmentId}", 10485760))
-                        message.Attachments.Add(new(file.FileName, file.ContentType));
+                        message.Attachments.Add(new(file.FileName?.Trim()?.HtmlSafe(), file.ContentType?.Trim()?.HtmlSafe()));
                     else req.Status = 413;
                     mailbox.UnlockSave();
                 }
