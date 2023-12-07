@@ -33,6 +33,9 @@ public partial class MailPlugin : Plugin
         public readonly HashSet<string> BlockedAddresses;
 
         [DataMember]
+        public string? Footer;
+
+        [DataMember]
         public readonly MailAuthRequirements AuthRequirements;
 
         [DataMember]
@@ -54,6 +57,7 @@ public partial class MailPlugin : Plugin
             };
             Contacts = [];
             BlockedAddresses = [];
+            Footer = null;
             AuthRequirements = new();
             CustomSettings = [];
         }
