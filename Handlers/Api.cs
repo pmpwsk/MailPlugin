@@ -257,7 +257,7 @@ public partial class MailPlugin : Plugin
                     int counter = 0;
                     foreach (var attachment in message.Attachments)
                     {
-                        msg.Attachments.Add(new($"../Mail/{mailbox.Id}/0/{counter}", attachment.Name ?? "missing file name", attachment.MimeType));
+                        msg.Attachments.Add(new($"../Mail/{mailbox.Id}/0/{counter}", string.IsNullOrEmpty(attachment.Name) ? "Unknown name" : attachment.Name, attachment.MimeType));
                         counter++;
                     }
                     var result = MailManager.Out.Send(msg, out var messageIds);
