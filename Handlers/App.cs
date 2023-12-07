@@ -340,7 +340,10 @@ public partial class MailPlugin : Plugin
                     else
                     {
                         message = null;
-                        to = null; subject = null; text = null;
+                        to = null; subject = null;
+                        if (mailbox.Footer != null)
+                            text = "\n\n" + mailbox.Footer;
+                        else text = null;
                     }
                     page.Navigation.Add(new Button("Back", $"{pluginHome}?mailbox={mailbox.Id}", "right"));
                     page.Title = (message == null || message.InReplyToId == null) ? "Send an email" : "Reply";
