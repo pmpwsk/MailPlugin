@@ -85,7 +85,16 @@ public partial class MailPlugin : Plugin
         {
             List<string> log = [];
             FullResult authResult = CheckEverything(connectionData, message, log);
-            List<MailAttachment> attachments = message.Attachments.Select(x => new MailAttachment(x.ContentDisposition.FileName, x.ContentType.MimeType)).ToList();
+            List<MailAttachment> attachments = message.Attachments.Select(x =>
+            {
+                string? fileName = x.ContentDisposition.FileName?.Trim()?.HtmlSafe();
+                if (fileName == "")
+                    fileName = null;
+                string? mimeType = x.ContentType.MimeType?.Trim().HtmlSafe();
+                if (mimeType == "")
+                    mimeType = null;
+                return new MailAttachment(fileName, mimeType);
+            }).ToList();
             MailMessage mail = new(true, DateTime.UtcNow, message, attachments, authResult, log);
             foreach (string toAddress in mailboxes.Select(x => x.Address))
             {
