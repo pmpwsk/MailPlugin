@@ -49,6 +49,9 @@ public partial class MailPlugin : Plugin
         [DataMember]
         public List<string> Log;
 
+        [DataMember]
+        public DateTime? Deleted;
+
         public MailMessage(bool unread, DateTime timestampUtc, MimeMessage message, List<MailAttachment> attachments, FullResult authResult, List<string> log)
         {
             Unread = unread;
@@ -65,6 +68,7 @@ public partial class MailPlugin : Plugin
             Attachments = attachments;
             AuthResult = authResult;
             Log = log;
+            Deleted = null;
         }
 
         public MailMessage(bool unread, DateTime timestampUtc, MailGen mailGen, string messageId)
@@ -82,6 +86,7 @@ public partial class MailPlugin : Plugin
             Attachments = mailGen.Attachments.Select(x => new MailAttachment(x.Name, x.ContentType)).ToList();
             AuthResult = null;
             Log = ["Received internally."];
+            Deleted = null;
         }
 
         public MailMessage(MailAddress from, List<MailAddress> to, string subject, string? inReplyToId)
@@ -99,6 +104,7 @@ public partial class MailPlugin : Plugin
             Attachments = [];
             AuthResult = null;
             Log = [];
+            Deleted = null;
         }
     }
 }
