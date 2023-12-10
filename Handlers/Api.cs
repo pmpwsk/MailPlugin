@@ -169,14 +169,23 @@ public partial class MailPlugin : Plugin
                 break;
             case "/delete-message":
                 {
-                    if (InvalidMailboxOrMessageOrFolder(req, out var mailbox, out _, out var messageId, out var folder, out _))
+                    if (InvalidMailboxOrMessageOrFolder(req, out var mailbox, out var message, out var messageId, out var folder, out var folderName))
                         break;
                     mailbox.Lock();
-                    string messagePath = $"../Mail/{mailbox.Id}/{messageId}";
-                    if (Directory.Exists(messagePath))
-                        Directory.Delete(messagePath, true);
-                    mailbox.Messages.Remove(messageId);
-                    folder.Remove(messageId);
+                    if (folderName == "Trash")
+                    {
+                        string messagePath = $"../Mail/{mailbox.Id}/{messageId}";
+                        if (Directory.Exists(messagePath))
+                            Directory.Delete(messagePath, true);
+                        mailbox.Messages.Remove(messageId);
+                        folder.Remove(messageId);
+                    }
+                    else
+                    {
+                        message.Deleted = DateTime.UtcNow;
+                        folder.Remove(messageId);
+                        mailbox.Folders["Trash"].Add(messageId);
+                    }
                     mailbox.UnlockSave();
                     await req.Write("ok");
                 }
