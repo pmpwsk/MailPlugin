@@ -27,7 +27,7 @@ public partial class MailPlugin : Plugin
         public readonly Dictionary<string, SortedSet<ulong>> Folders; //key is the folder name, value is the list of message ids within it, sorted by time
 
         [DataMember]
-        public readonly Dictionary<string, string> Contacts; //key=address, value=name
+        public readonly Dictionary<string, MailContact> Contacts; //key=address, value=contact object
 
         [DataMember]
         public readonly HashSet<string> BlockedAddresses;
