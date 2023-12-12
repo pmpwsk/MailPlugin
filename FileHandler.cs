@@ -35,24 +35,24 @@ public partial class MailPlugin : Plugin
     {
         return relPath switch
         {
-            "/icon-red.ico" => "638332631260000000",
-            "/icon-red.png" => "638332630610000000",
-            "/icon-red.svg" => "638332630630000000",
+            "/icon-red.ico" => "638332631265414744",
+            "/icon-red.png" => "638332630615875853",
+            "/icon-red.svg" => "638332630634674547",
             "/icon.ico" => "638305579890000000",
             "/icon.png" => "638305572080000000",
             "/icon.svg" => "638314577150000000",
-            "/manage-mailbox.js" => "638316945310000000",
+            "/manage-mailbox.js" => "638316945312051545",
             "/manage.js" => "638305832790000000",
             "/manifest.json" => "638305601980000000",
-            "/message.js" => "638352315380000000",
-            "/move.js" => "638326667370000000",
+            "/message.js" => "638352315380810421",
+            "/move.js" => "638326667379643679",
             "/query.js" => "638307608900000000",
-            "/send-attachments.js" => "638319658300000000",
-            "/send-preview.js" => "638353191770000000",
-            "/send.js" => "638353170500000000",
-            "/settings-auth.js" => "638370487920000000",
-            "/settings-folders.js" => "638326725500000000",
-            "/settings.js" => "638375721582028948",
+            "/send-attachments.js" => "638319658303962355",
+            "/send-preview.js" => "638353191771644046",
+            "/send.js" => "638353170506457192",
+            "/settings-auth.js" => "638370487927725670",
+            "/settings-folders.js" => "638326725507546203",
+            "/settings.js" => "638375721580000000",
             _ => null
         };
     }
