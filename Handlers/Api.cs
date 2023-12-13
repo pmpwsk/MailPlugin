@@ -537,9 +537,8 @@ public partial class MailPlugin : Plugin
                             mailbox.Lock();
                             mailbox.Contacts[email] = new(name, favorite);
                             mailbox.UnlockSave();
-                            await req.Write("ok");
                         }
-                        else await req.Write("invalid-mail");
+                        else req.Status = 418;
                     }
                     else req.Status = 400;
                 } break;
