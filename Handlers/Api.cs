@@ -543,6 +543,19 @@ public partial class MailPlugin : Plugin
                     }
                     else req.Status = 400;
                 } break;
+            case "/contacts/delete":
+                {
+                    if (InvalidMailbox(req, out var mailbox))
+                        break;
+                    if (req.Query.TryGetValue("email", out string? email))
+                    {
+                        mailbox.Lock();
+                        if (mailbox.Contacts.Remove(email))
+                            mailbox.UnlockSave();
+                        else mailbox.UnlockIgnore();
+                    }
+                    else req.Status = 400;
+                } break;
             default:
                 req.Status = 404;
                 break;
