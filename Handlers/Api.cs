@@ -523,6 +523,26 @@ public partial class MailPlugin : Plugin
                     else req.Status = 400;
                 }
                 break;
+            case "/contacts/set":
+                {
+                    if (InvalidMailbox(req, out var mailbox))
+                        break;
+                    if (req.Query.TryGetValue("email", out string? email)
+                        && req.Query.TryGetValue("name", out string? name)
+                        && req.Query.TryGetValue("favorite", out string? favoriteS)
+                        && bool.TryParse(favoriteS, out bool favorite))
+                    {
+                        if (AccountManager.CheckMailAddressFormat(email))
+                        {
+                            mailbox.Lock();
+                            mailbox.Contacts[email] = new(name, favorite);
+                            mailbox.UnlockSave();
+                            await req.Write("ok");
+                        }
+                        else await req.Write("invalid-mail");
+                    }
+                    else req.Status = 400;
+                } break;
             default:
                 req.Status = 404;
                 break;
