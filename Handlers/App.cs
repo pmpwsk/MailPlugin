@@ -1,4 +1,5 @@
 ﻿using System.Web;
+using uwap.Database;
 using uwap.WebFramework.Accounts;
 using uwap.WebFramework.Elements;
 using static uwap.WebFramework.Mail.MailAuth;
@@ -608,6 +609,55 @@ public partial class MailPlugin : Plugin
                     ]));
                 }
                 break;
+            case "/settings/contacts":
+                {
+                    if (InvalidMailbox(req, out var mailbox, e))
+                        break;
+                    page.Scripts.Add(new Script(pathPrefix + "/query.js"));
+                    page.Sidebar.Add(new ButtonElement("Mailboxes:", null, pluginHome));
+                    foreach (var m in (Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : [])
+                        .OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@')))
+                        page.Sidebar.Add(new ButtonElement(null, m.Address, $"{pathPrefix}/settings/contacts?mailbox={m.Id}"));
+                    HighlightSidebar(page, req, "email");
+                    if (req.Query.TryGetValue("email", out string? email))
+                    {
+                        //edit
+                        if (!mailbox.Contacts.TryGetValue(email, out var contact))
+                        {
+                            req.Status = 404;
+                            break;
+                        }
+                        page.Title = "Edit contact";
+                        page.Navigation.Add(new Button("Back", $"{pathPrefix}/settings/contacts?mailbox={mailbox.Id}", "right"));
+                        page.Scripts.Add(new Script(pathPrefix + "/settings-contacts-edit.js"));
+                        e.Add(new LargeContainerElement("Edit contact",
+                        [
+                           new TextBox("Enter an address...", email, "email", TextBoxRole.Email, onEnter: "Save()", onInput: "Changed()", autofocus: true),
+                           new TextBox("Enter a name...", contact.Name, "name", onEnter: "Save()", onInput: "Changed()"),
+                           new Checkbox("Favorite", "favorite", contact.Favorite) { OnChange = "Changed()" }
+                        ])
+                        { Button = new ButtonJS("Saved!", "Save()", id: "save") });
+                        page.AddError();
+                    }
+                    else
+                    {
+                        //add+list
+                        page.Title = "Mail contacts";
+                        page.Navigation.Add(new Button("Back", $"{pathPrefix}/settings?mailbox={mailbox.Id}", "right"));
+                        page.Scripts.Add(new Script(pathPrefix + "/settings-contacts.js"));
+                        e.Add(new LargeContainerElement("Mail contacts", new Paragraph(mailbox.Address)));
+                        e.Add(new ContainerElement("Add contact",
+                        [
+                           new TextBox("Enter an address...", null, "email", TextBoxRole.Email, onEnter: "Add()", onInput: "Changed()", autofocus: true),
+                           new TextBox("Enter a name...", null, "name", onEnter: "Add()", onInput: "Changed()"),
+                           new Checkbox("Favorite", "favorite") { OnChange = "Changed()" }
+                        ]) { Button = new ButtonJS("Add", "Add()", "green", id: "save") });
+                        page.AddError();
+                        Search<KeyValuePair<string, MailContact>> search = new(mailbox.Contacts, null);
+                        foreach (var contactKV in search.Sort(x => !x.Value.Favorite, x => x.Value.Name))
+                            e.Add(new ButtonElement($"{(contactKV.Value.Favorite ? "[*] " : "")}{contactKV.Value.Name}", contactKV.Key, $"{pathPrefix}/settings/contacts?mailbox={mailbox.Id}&email={contactKV.Key}"));
+                    }
+                } break;
             case "/manage":
                 if (!req.IsAdmin())
                 {
