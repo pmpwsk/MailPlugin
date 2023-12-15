@@ -522,6 +522,7 @@ public partial class MailPlugin : Plugin
                     page.AddError();
                     e.Add(new ButtonElement("Folders", null, $"{pathPrefix}/settings/folders?mailbox={mailbox.Id}"));
                     e.Add(new ButtonElement("Authentication", null, $"{pathPrefix}/settings/auth?mailbox={mailbox.Id}"));
+                    e.Add(new ButtonElement("Contacts", null, $"{pathPrefix}/settings/contacts?mailbox={mailbox.Id}"));
                     e.Add(new ContainerElement("Name", new TextBox("Enter a name...", mailbox.Name, "name-input", onEnter: "SaveName()", onInput: "NameChanged()")) { Button = new ButtonJS("Saved!", "SaveName()", id: "save-name") });
                     e.Add(new ContainerElement("Footer", new TextArea("Enter a footer...", mailbox.Footer, "footer-input", 5, onInput: "FooterChanged()")) { Button = new ButtonJS("Saved!", "SaveFooter()", id: "save-footer") });
                 }
