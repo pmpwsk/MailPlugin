@@ -21,5 +21,14 @@ public partial class MailPlugin : Plugin
         public string HostPart => Address.After('@');
         public string FullString
             => (Name == null || Name == "" || Name == Address || Name == LocalPart) ? Address : $"{Name} ({Address})";
+
+        public string ContactString(Mailbox mailbox)
+        {
+            if (mailbox.Contacts.TryGetValue(Address, out var contact))
+                return $"{contact.Name} ({Address})";
+            else if (Name != null && Name != "" && Name != Address && Name != LocalPart)
+                return $"{Name} ({Address})";
+            else return Address;
+        }
     }
 }
