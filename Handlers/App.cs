@@ -256,13 +256,13 @@ public partial class MailPlugin : Plugin
                         if (message.InReplyToId != null)
                             headingContents.Add(new Paragraph($"This is a reply to another email (<a href=\"javascript:\" id=\"find\" onclick=\"FindOriginal('{HttpUtility.UrlEncode(message.InReplyToId)}')\">find</a>)."));
                         headingContents.Add(new Paragraph(DateTimeString(AdjustDateTime(req, message.TimestampUtc))));
-                        headingContents.Add(new Paragraph("From: " + message.From.FullString));
+                        headingContents.Add(new Paragraph("From: " + message.From.ContactString(mailbox)));
                         foreach (var to in message.To)
-                            headingContents.Add(new Paragraph("To: " + to.FullString));
+                            headingContents.Add(new Paragraph("To: " + to.ContactString(mailbox)));
                         foreach (var cc in message.Cc)
-                            headingContents.Add(new Paragraph("CC: " + cc.FullString));
+                            headingContents.Add(new Paragraph("CC: " + cc.ContactString(mailbox)));
                         foreach (var bcc in message.Bcc)
-                            headingContents.Add(new Paragraph("BCC: " + bcc.FullString));
+                            headingContents.Add(new Paragraph("BCC: " + bcc.ContactString(mailbox)));
                         e.Add(new LargeContainerElement($"{message.Subject}", headingContents) { Button = new ButtonJS("Delete", "Delete()", "red", id: "deleteButton") });
                         if (folderName != "Sent")
                             e.Add(new ContainerElement(null, "Do:") { Buttons =
