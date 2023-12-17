@@ -245,7 +245,7 @@ public partial class MailPlugin : Plugin
                             {
                                 if (m.Unread)
                                     anyUnread = true;
-                                page.Sidebar.Add(new ButtonElement(null, $"{m.From.ContactString(mailbox)}:<br/>{m.Subject}", $"{pluginHome}?mailbox={mailboxId}&folder={HttpUtility.UrlEncode(folderName)}&message={mId}{offsetQuery}", m.Unread ? "red" : null));
+                                page.Sidebar.Add(new ButtonElement(null, $"{(folderName == "Sent" ? "To: " + string.Join(", ", m.To.Select(x => x.ContactString(mailbox))) : m.From.ContactString(mailbox))}:<br/>{m.Subject}", $"{pluginHome}?mailbox={mailboxId}&folder={HttpUtility.UrlEncode(folderName)}&message={mId}{offsetQuery}", m.Unread ? "red" : null));
                             }
                         if (anyUnread)
                             page.Favicon = pathPrefix + "/icon-red.ico";
