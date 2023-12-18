@@ -1,4 +1,5 @@
 ﻿using uwap.WebFramework.Accounts;
+using static QRCoder.PayloadGenerator;
 
 namespace uwap.WebFramework.Plugins;
 
@@ -42,12 +43,12 @@ public partial class MailPlugin : Plugin
                     mailbox.Lock();
                     if (message != null)
                     {
-                        message.To = to.Select(x => new MailAddress(x, x)).ToList();
+                        message.To = to.Select(x => new MailAddress(x, mailbox.Contacts.TryGetValue(x, out var contact) ? contact.Name : x)).ToList();
                         message.Subject = subject.Trim();
                     }
                     else
                     {
-                        mailbox.Messages[0] = new(new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address), to.Select(x => new MailAddress(x, x)).ToList(), subject.Trim(), null);
+                        mailbox.Messages[0] = new(new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address), to.Select(x => new MailAddress(x, mailbox.Contacts.TryGetValue(x, out var contact) ? contact.Name : x)).ToList(), subject.Trim(), null);
                     }
 
                     WriteText:
