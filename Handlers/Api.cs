@@ -382,7 +382,7 @@ public partial class MailPlugin : Plugin
                     string subject = message.Subject.Trim();
                     while (subject.SplitAtFirst(':', out var subjectPrefix, out var realSubject) && subjectPrefix.All(char.IsLetter) && (subjectPrefix.Length == 2 || subjectPrefix.Length == 3) && realSubject.TrimStart() != "")
                         subject = realSubject.TrimStart();
-                    mailbox.Messages[0] = new(new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address), [message.From], "Re: " + subject, message.MessageId);
+                    mailbox.Messages[0] = new(new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address), [new MailAddress(message.From.Address, mailbox.Contacts.TryGetValue(message.From.Address, out var contact) ? contact.Name : message.From.Address)], "Re: " + subject, message.MessageId);
                     Directory.CreateDirectory($"../Mail/{mailbox.Id}/0");
                     File.WriteAllText($"../Mail/{mailbox.Id}/0/text", text ?? "");
                     mailbox.UnlockSave();
