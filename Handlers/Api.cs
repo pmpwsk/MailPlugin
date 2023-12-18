@@ -563,12 +563,16 @@ public partial class MailPlugin : Plugin
                     {
                         if (mailbox.Messages.TryGetValue(0, out var message))
                         {
-                            if (!message.To.Any(x => x.Address == email))
+                            if (message.InReplyToId == null)
                             {
-                                mailbox.Lock();
-                                message.To.Add(new(email, mailbox.Contacts.TryGetValue(email, out var contact) ? contact.Name : email));
-                                mailbox.UnlockSave();
+                                if (!message.To.Any(x => x.Address == email))
+                                {
+                                    mailbox.Lock();
+                                    message.To.Add(new(email, mailbox.Contacts.TryGetValue(email, out var contact) ? contact.Name : email));
+                                    mailbox.UnlockSave();
+                                }
                             }
+                            else req.Status = 403;
                         }
                         else req.Status = 404;
                     }
