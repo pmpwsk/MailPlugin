@@ -555,6 +555,25 @@ public partial class MailPlugin : Plugin
                     }
                     else req.Status = 400;
                 } break;
+            case "/draft/add-recipient":
+                {
+                    if (InvalidMailbox(req, out var mailbox))
+                        break;
+                    if (req.Query.TryGetValue("email", out string? email))
+                    {
+                        if (mailbox.Messages.TryGetValue(0, out var message))
+                        {
+                            if (!message.To.Any(x => x.Address == email))
+                            {
+                                mailbox.Lock();
+                                message.To.Add(new(email, mailbox.Contacts.TryGetValue(email, out var contact) ? contact.Name : email));
+                                mailbox.UnlockSave();
+                            }
+                        }
+                        else req.Status = 404;
+                    }
+                    else req.Status = 400;
+                } break;
             default:
                 req.Status = 404;
                 break;
