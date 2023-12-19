@@ -485,7 +485,8 @@ public partial class MailPlugin : Plugin
                 {
                     if (InvalidMailbox(req, out var mailbox, e))
                         break;
-                    page.Navigation.Add(new Button("Back", $"{pathPrefix}/send?mailbox={mailbox.Id}", "right"));
+                    string? query = req.Query.TryGet("search");
+                    page.Navigation.Add(new Button("Back", $"{pathPrefix}/send{(query == null ? "" : "/contacts")}?mailbox={mailbox.Id}", "right"));
                     page.Title = "Send an email";
                     page.Scripts.Add(new Script(pathPrefix + "/query.js"));
                     page.Scripts.Add(new Script(pathPrefix + "/send-contacts.js"));
@@ -493,19 +494,25 @@ public partial class MailPlugin : Plugin
                     foreach (var m in (Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : [])
                         .OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@')))
                         page.Sidebar.Add(new ButtonElement(null, m.Address, $"{pathPrefix}/send/contacts?mailbox={m.Id}"));
-                    HighlightSidebar(page, req);
+                    HighlightSidebar(page, req, "search");
                     if (!mailbox.Messages.TryGetValue(0, out var message))
                     {
                         e.Add(new LargeContainerElement("No draft found!", "", "red"));
                         break;
                     }
                     e.Add(new LargeContainerElement("Send an email", $"From: {mailbox.Address}{(mailbox.Name == null ? "" : $" ({mailbox.Name})")}", id: "e1"));
+                    e.Add(new ContainerElement(null, new TextBox("Search...", query, "search", onEnter: $"var searchValue = document.querySelector('#search').value; if (searchValue === '') {{ if (GetQuery('search') !== 'null') {{ window.location.assign('{pathPrefix}/send/contacts?mailbox={mailbox.Id}'); }} }} else {{ window.location.assign('{pathPrefix}/send/contacts?mailbox={mailbox.Id}&search=' + searchValue);}}")));
                     Presets.AddError(page);
                     if (mailbox.Contacts.Count == 0)
                         e.Add(new ContainerElement("No contacts found!", "", "red"));
                     else
                     {
-                        Search<KeyValuePair<string, MailContact>> search = new(mailbox.Contacts, null);
+                        Search<KeyValuePair<string, MailContact>> search = new(mailbox.Contacts, query);
+                        if (query != null)
+                        {
+                            search.Find(x => x.Value.Name);
+                            search.Find(x => x.Key);
+                        }
                         foreach (var contactKV in search.Sort(x => !x.Value.Favorite, x => x.Value.Name))
                             e.Add(new ButtonElementJS($"{(contactKV.Value.Favorite ? "[*] " : "")}{contactKV.Value.Name}", contactKV.Key, $"AddContact('{HttpUtility.UrlEncode(contactKV.Key)}')"));
                     }
