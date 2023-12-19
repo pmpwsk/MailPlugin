@@ -328,7 +328,7 @@ public partial class MailPlugin : Plugin
                     string? to, subject, text;
                     if (mailbox.Messages.TryGetValue(0, out var message))
                     {
-                        to = string.Join(';', message.To.Select(x => x.Address));
+                        to = string.Join(", ", message.To.Select(x => x.Address));
                         if (to == "")
                             to = null;
                         subject = message.Subject;
