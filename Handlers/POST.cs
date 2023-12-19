@@ -1,5 +1,4 @@
 ﻿using uwap.WebFramework.Accounts;
-using static QRCoder.PayloadGenerator;
 
 namespace uwap.WebFramework.Plugins;
 

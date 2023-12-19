@@ -1,5 +1,4 @@
 ﻿using MimeKit;
-using Org.BouncyCastle.Ocsp;
 using SmtpServer;
 using SmtpServer.Mail;
 using SmtpServer.Protocol;
