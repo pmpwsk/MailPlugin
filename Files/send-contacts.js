@@ -10,3 +10,15 @@ async function AddContact(email) {
         ShowError("Connection failed.");
     }
 }
+
+function Search() {
+    let searchValue = document.querySelector("#search").value;
+    let searchQuery = GetQuery("search");
+    if (searchQuery === "null")
+        searchQuery = "";
+    if (searchValue === searchQuery)
+        return;
+    if (searchValue === "")
+        window.location.assign("[PATH_PREFIX]/send/contacts?mailbox=" + GetQuery("mailbox"));
+    else window.location.assign("[PATH_PREFIX]/send/contacts?mailbox=" + GetQuery("mailbox") + "&search=" + searchValue);
+}
