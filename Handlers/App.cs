@@ -501,7 +501,7 @@ public partial class MailPlugin : Plugin
                         break;
                     }
                     e.Add(new LargeContainerElement("Send an email", $"From: {mailbox.Address}{(mailbox.Name == null ? "" : $" ({mailbox.Name})")}", id: "e1"));
-                    e.Add(new ContainerElement(null, new TextBox("Search...", query, "search", onEnter: $"var searchValue = document.querySelector('#search').value; if (searchValue === '') {{ if (GetQuery('search') !== 'null') {{ window.location.assign('{pathPrefix}/send/contacts?mailbox={mailbox.Id}'); }} }} else {{ window.location.assign('{pathPrefix}/send/contacts?mailbox={mailbox.Id}&search=' + searchValue);}}")));
+                    e.Add(new ContainerElement(null, new TextBox("Search...", query, "search", onEnter: $"Search()")));
                     Presets.AddError(page);
                     if (mailbox.Contacts.Count == 0)
                         e.Add(new ContainerElement("No contacts found!", "", "red"));
