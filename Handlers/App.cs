@@ -481,6 +481,35 @@ public partial class MailPlugin : Plugin
                         }
                     }
                 } break;
+            case "/send/contacts":
+                {
+                    if (InvalidMailbox(req, out var mailbox, e))
+                        break;
+                    page.Navigation.Add(new Button("Back", $"{pathPrefix}/send?mailbox={mailbox.Id}", "right"));
+                    page.Title = "Send an email";
+                    page.Scripts.Add(new Script(pathPrefix + "/query.js"));
+                    page.Scripts.Add(new Script(pathPrefix + "/send-contacts.js"));
+                    page.Sidebar.Add(new ButtonElement("Mailboxes:", null, pluginHome));
+                    foreach (var m in (Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : [])
+                        .OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@')))
+                        page.Sidebar.Add(new ButtonElement(null, m.Address, $"{pathPrefix}/send/contacts?mailbox={m.Id}"));
+                    HighlightSidebar(page, req);
+                    if (!mailbox.Messages.TryGetValue(0, out var message))
+                    {
+                        e.Add(new LargeContainerElement("No draft found!", "", "red"));
+                        break;
+                    }
+                    e.Add(new LargeContainerElement("Send an email", $"From: {mailbox.Address}{(mailbox.Name == null ? "" : $" ({mailbox.Name})")}", id: "e1"));
+                    Presets.AddError(page);
+                    if (mailbox.Contacts.Count == 0)
+                        e.Add(new ContainerElement("No contacts found!", "", "red"));
+                    else
+                    {
+                        Search<KeyValuePair<string, MailContact>> search = new(mailbox.Contacts, null);
+                        foreach (var contactKV in search.Sort(x => !x.Value.Favorite, x => x.Value.Name))
+                            e.Add(new ButtonElementJS($"{(contactKV.Value.Favorite ? "[*] " : "")}{contactKV.Value.Name}", contactKV.Key, $"AddContact('{HttpUtility.UrlEncode(contactKV.Key)}')"));
+                    }
+                } break;
             case "/move":
                 {
                     if (InvalidMailboxOrMessageOrFolder(req, out var mailbox, out var message, out var messageId, out _, out var folderName, e))
