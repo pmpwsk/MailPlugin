@@ -389,7 +389,7 @@ public partial class MailPlugin : Plugin
                     inputs.Add(new TextArea("Message...", text, "text", autofocus: true, onInput: "MessageChanged(); Resize()"));
                     e.Add(new LargeContainerElement(null, inputs, id: "e3"));
                     int attachmentCount = message == null ? 0 : message.Attachments.Count;
-                    e.Add(new ContainerElement(null, "More:", id: "e4") { Buttons = [new ButtonJS($"Attachments ({attachmentCount})", "GoToAttachments()")] });
+                    e.Add(new ContainerElement(null, "More:", id: "e4") { Buttons = [new ButtonJS($"Attachments ({attachmentCount})", "GoToAttachments()"), new ButtonJS("Contacts", "GoToContacts()")] });
                 }
                 break;
             case "/send/attachments":
