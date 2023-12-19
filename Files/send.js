@@ -57,6 +57,12 @@ async function GoToPreview() {
     }
 }
 
+async function GoToContacts() {
+    if (await Save()) {
+        window.location.assign("[PATH_PREFIX]/send/contacts?mailbox=" + GetQuery("mailbox"));
+    }
+}
+
 async function Save() {
     save.innerText = "Saving...";
     save.className = "green";
