@@ -530,7 +530,7 @@ public partial class MailPlugin : Plugin
                     page.Title = "Move";
                     page.Scripts.Add(new Script(pathPrefix + "/query.js"));
                     page.Scripts.Add(new Script(pathPrefix + "/move.js"));
-                    e.Add(new LargeContainerElement("Moving", message.Subject) { Button = new Button("Cancel", $"{pluginHome}?mailbox={mailbox.Id}&folder={folderName}&message={messageId}", "red") });
+                    e.Add(new LargeContainerElement("Moving", message.Subject));
                     page.AddError();
                     foreach (var f in SortFolders(mailbox.Folders.Keys))
                         if (f == "Sent")
