@@ -11,6 +11,7 @@ let e4 = document.querySelector('#e4');
 let sidebar = document.querySelector('.sidebar');
 let full = document.querySelector('.full');
 let save = document.querySelector('#save');
+let discard = document.querySelector('#discard');
 window.onresize = Resize;
 ta.onclick = Refocus;
 Resize();
@@ -99,6 +100,10 @@ async function Save() {
 
 async function Discard() {
     try {
+        if (discard.innerText === "Discard") {
+            discard.innerText = "Discard?";
+            return;
+        }
         let response = await fetch("/api[PATH_PREFIX]/delete-draft?mailbox=" + GetQuery("mailbox"));
         if (response.status === 200) {
             window.location.assign("[PATH_HOME]?mailbox=" + GetQuery("mailbox"));
