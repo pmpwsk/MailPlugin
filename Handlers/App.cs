@@ -378,7 +378,7 @@ public partial class MailPlugin : Plugin
                     [
                         new ButtonJS("Preview", "GoToPreview()"),
                         new ButtonJS("Saved!", "Save()", id: "save"),
-                        new ButtonJS("Discard", "Discard()", "red", id: "discardButton")
+                        new ButtonJS("Discard", "Discard()", "red", id: "discard")
                     ]});
                     List<IContent> inputs = [];
                     if (message == null || message.InReplyToId == null)
