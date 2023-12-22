@@ -517,6 +517,24 @@ public partial class MailPlugin : Plugin
                             e.Add(new ButtonElementJS($"{(contactKV.Value.Favorite ? "[*] " : "")}{contactKV.Value.Name}", contactKV.Key, $"AddContact('{HttpUtility.UrlEncode(contactKV.Key)}')"));
                     }
                 } break;
+            case "/forward":
+                {
+                    if (InvalidMailboxOrMessageOrFolder(req, out var mailbox, out var message, out var messageId, out _, out var folderName, e))
+                        break;
+                    page.Navigation.Add(new Button("Back", $"{pluginHome}?mailbox={mailbox.Id}&folder={folderName}&message={messageId}", "right"));
+                    page.Title = "Forward";
+                    page.Scripts.Add(new Script(pathPrefix + "/query.js"));
+                    page.Scripts.Add(new Script(pathPrefix + "/forward.js"));
+                    e.Add(new LargeContainerElement("Forward", message.Subject));
+                    page.AddError();
+                    e.Add(new ButtonElementJS("Option 1: Quote", "Quotes this email in a new draft.", "Quote()"));
+                    e.Add(new ContainerElement("Option 2: Original",
+                    [
+                        new Paragraph("Sends the exact message."),
+                        new Checkbox("Add information about the original message", "info", true),
+                        new TextBox("Recipient(s)...", null, "to", TextBoxRole.Email, "Original()", autofocus: true)
+                    ]) { Button = new ButtonJS("Send", "Original()", "green", "send")});
+                } break;
             case "/move":
                 {
                     if (InvalidMailboxOrMessageOrFolder(req, out var mailbox, out var message, out var messageId, out _, out var folderName, e))
