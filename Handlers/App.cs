@@ -527,7 +527,10 @@ public partial class MailPlugin : Plugin
                     page.Scripts.Add(new Script(pathPrefix + "/forward.js"));
                     e.Add(new LargeContainerElement("Forward", message.Subject));
                     page.AddError();
-                    e.Add(new ButtonElementJS("Option 1: Quote", "Quotes this email in a new draft.", "Quote()"));
+                    e.Add(new ContainerElement("Option 1: Quote",
+                    [
+                        new Paragraph("Quotes this email in a new draft.")
+                    ]) { Button = new ButtonJS("Draft", "Quote()", "green") });
                     e.Add(new ContainerElement("Option 2: Original",
                     [
                         new Paragraph("Sends the exact message."),
