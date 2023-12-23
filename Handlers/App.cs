@@ -529,7 +529,8 @@ public partial class MailPlugin : Plugin
                     page.AddError();
                     e.Add(new ContainerElement("Option 1: Quote",
                     [
-                        new Paragraph("Quotes this email in a new draft.")
+                        new Paragraph("Quotes this email in a new draft."),
+                        new Checkbox("Include the entire conversation (not just the last 1-2 messages)", "everything", false)
                     ]) { Button = new ButtonJS("Draft", "Quote()", "green") });
                     e.Add(new ContainerElement("Option 2: Original",
                     [
