@@ -533,7 +533,7 @@ public partial class MailPlugin : Plugin
                         new Paragraph("Sends the exact message."),
                         new Checkbox("Add information about the original message", "info", true),
                         new TextBox("Recipient(s)...", null, "to", TextBoxRole.Email, "Original()", autofocus: true)
-                    ]) { Button = new ButtonJS("Send", "Original()", "green", "send")});
+                    ]) { Button = new ButtonJS("Send", "Original()", "green", id: "send")});
                 } break;
             case "/move":
                 {
