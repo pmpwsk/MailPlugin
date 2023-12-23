@@ -388,6 +388,38 @@ public partial class MailPlugin : Plugin
                     mailbox.UnlockSave();
                 }
                 break;
+            case "/forward/quote":
+                {
+                    if (InvalidMailboxOrMessageOrFolder(req, out var mailbox, out var message, out var messageId, out _, out var folderName))
+                        break;
+                    if ((!req.Query.TryGetValue("everything", out string? everythingS)) || !bool.TryParse(everythingS, out bool everything))
+                    {
+                        req.Status = 400;
+                        break;
+                    }
+                    mailbox.Lock();
+                    string? text = null;
+                    string messagePath = $"../Mail/{mailbox.Id}/{messageId}/";
+                    if (File.Exists(messagePath + "html"))
+                        text = File.ReadAllText(messagePath + "html");
+                    if (text == null && File.Exists(messagePath + "text"))
+                        text = AddHTML(File.ReadAllText(messagePath + "text").HtmlSafe());
+                    if (text != null)
+                        text = $"\n\n\n# Forwarded message:\n# From: {message.From.FullString}\n# Time: {DateTimeString(message.TimestampUtc)} UTC\n\n\n{QuoteHTML(everything ? text : Before(text, "# Original message:").TrimEnd())}";
+                    else text = "";
+
+                    if (mailbox.Footer != null)
+                        text = "\n\n" + mailbox.Footer + text;
+
+                    string subject = message.Subject.Trim();
+                    while (subject.SplitAtFirst(':', out var subjectPrefix, out var realSubject) && subjectPrefix.All(char.IsLetter) && (subjectPrefix.Length == 2 || subjectPrefix.Length == 3) && realSubject.TrimStart() != "")
+                        subject = realSubject.TrimStart();
+                    mailbox.Messages[0] = new(new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address), [], "Fwd: " + subject, null);
+                    Directory.CreateDirectory($"../Mail/{mailbox.Id}/0");
+                    File.WriteAllText($"../Mail/{mailbox.Id}/0/text", text ?? "");
+                    mailbox.UnlockSave();
+                }
+                break;
             case "/move":
                 {
                     if (InvalidMailboxOrMessageOrFolder(req, out var mailbox, out _, out var messageId, out var folder, out var folderName))
