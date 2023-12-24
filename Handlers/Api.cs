@@ -390,7 +390,7 @@ public partial class MailPlugin : Plugin
                 break;
             case "/forward/quote":
                 {
-                    if (InvalidMailboxOrMessageOrFolder(req, out var mailbox, out var message, out var messageId, out _, out var folderName))
+                    if (InvalidMailboxOrMessageOrFolder(req, out var mailbox, out var message, out var messageId, out _, out _))
                         break;
                     if ((!req.Query.TryGetValue("everything", out string? everythingS)) || !bool.TryParse(everythingS, out bool everything))
                     {
