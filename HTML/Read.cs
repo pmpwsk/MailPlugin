@@ -277,10 +277,7 @@ public partial class MailPlugin : Plugin
             url = url.Remove(0, 7);
         else return false;
 
-        if (url.SplitAtLast('@', out _, out var newUrl))
-            url = newUrl;
-
-        domain = url.Before('/');
+        domain = url.Before('/').After('@');
         return true;
     }
 
