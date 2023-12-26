@@ -67,9 +67,5 @@ public partial class MailPlugin : Plugin
     }
 
     private static string CleanHttpUrlWithoutProtocol(string urlWithoutProto)
-    {
-        if (urlWithoutProto.SplitAtLast('@', out _, out var newUrl))
-            return newUrl;
-        else return urlWithoutProto;
-    }
+        => urlWithoutProto.Before('/').After('@');
 }
