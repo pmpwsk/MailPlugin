@@ -44,7 +44,7 @@ public partial class MailPlugin : Plugin
         {
             case "":
                 {
-                    page.Scripts.Add(new CustomScript($"let cookie = \"TimeOffset=\" + new Date().getTimezoneOffset();\nif (!document.cookie.split(\";\").some(x => x.trim() === cookie))\n\tdocument.cookie = cookie + \"; domain={req.Domain}; path=/; SameSite=Strict\";"));
+                    page.Scripts.Add(new CustomScript($"let cookie = \"TimeOffset=\" + new Date().getTimezoneOffset();\nif (!document.cookie.split(\";\").some(x => x.trim() === cookie)) {{\n\tlet d8 = new Date();\n\td8.setTime(d8.getTime() + 7776000000);\n\tdocument.cookie = cookie + \"; domain={req.Domain}; path=/; SameSite=Strict; expires=\" + d8.toUTCString();\n}}"));
                     if (!req.Query.TryGetValue("mailbox", out string? mailboxId))
                     {/////
                         //list mailboxes that the user has access to or an error if none were found, redirect to mailbox if only one is present and user isn't admin
