@@ -1,5 +1,5 @@
 {
-  "name": "Mail ([DOMAIN])",
+  "name": "Mail ([DOMAIN_MAIN])",
   "short_name": "Mail",
   "start_url": "[PATH_HOME]",
   "display": "minimal-ui",
