@@ -1,4 +1,5 @@
 let save = document.querySelector("#save");
+let del = document.querySelector("#del");
 
 function Changed() {
     save.innerText = "Save";
@@ -36,10 +37,14 @@ async function Save() {
 
 async function Delete() {
     try {
-        let response = await fetch("/api[PATH_PREFIX]/contacts/delete?mailbox=" + GetQuery("mailbox") + "&email=" + encodeURIComponent(GetQuery("email")));
-        if (response.status === 200)
-            window.location.assign("[PATH_PREFIX]/settings/contacts?mailbox=" + GetQuery("mailbox"));
-        else ShowError("Connection failed.");
+        if (del.innerText == "Delete")
+            del.innerText = "Delete?";
+        else {
+            let response = await fetch("/api[PATH_PREFIX]/contacts/delete?mailbox=" + GetQuery("mailbox") + "&email=" + encodeURIComponent(GetQuery("email")));
+            if (response.status === 200)
+                window.location.assign("[PATH_PREFIX]/settings/contacts?mailbox=" + GetQuery("mailbox"));
+            else ShowError("Connection failed.");
+        }
     } catch {
         ShowError("Connection failed.");
     }
