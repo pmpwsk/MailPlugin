@@ -694,8 +694,11 @@ public partial class MailPlugin : Plugin
                            new TextBox("Enter an address...", email, "email", TextBoxRole.Email, onEnter: "Save()", onInput: "Changed()", autofocus: true),
                            new TextBox("Enter a name...", contact.Name, "name", onEnter: "Save()", onInput: "Changed()"),
                            new Checkbox("Favorite", "favorite", contact.Favorite) { OnChange = "Changed()" }
-                        ])
-                        { Button = new ButtonJS("Saved!", "Save()", id: "save") });
+                        ]) { Buttons =
+                        [
+                            new ButtonJS("Delete", "Delete()", "red", id: "del"),
+                            new ButtonJS("Saved!", "Save()", id: "save")
+                        ] });
                         page.AddError();
                     }
                     else
