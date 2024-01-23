@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -18,4 +18,5 @@
     <ProjectReference Include="..\..\Web\WebFramework\WebFramework.csproj" />
   </ItemGroup>
 
+  <!--PluginFilePacker start--><ItemGroup><Compile Update="Properties\PluginFiles.Designer.cs"><DesignTime>True</DesignTime><AutoGen>True</AutoGen><DependentUpon>PluginFiles.resx</DependentUpon></Compile></ItemGroup><ItemGroup><EmbeddedResource Update="Properties\PluginFiles.resx"><Generator>ResXFileCodeGenerator</Generator><LastGenOutput>PluginFiles.Designer.cs</LastGenOutput></EmbeddedResource></ItemGroup><!--PluginFilePacker end-->
 </Project>
