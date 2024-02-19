@@ -122,6 +122,11 @@ public partial class MailPlugin : Plugin
             UserAllowedMailboxes = access;
         }
 
+        protected override IEnumerable<string> EnumerateDirectoriesToClear()
+        {
+            yield return "../Mail";
+        }
+
         protected override IEnumerable<string> EnumerateOtherDirectories(TableEntry<Mailbox> entry)
         {
             yield return $"../Mail/{entry.Key}";
