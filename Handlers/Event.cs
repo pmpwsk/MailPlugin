@@ -74,7 +74,7 @@ public partial class MailPlugin : Plugin
                 if (req.Query.TryGetValue("last", out var lastString) && ulong.TryParse(lastString, out var last) && actualLast > last)
                 {
                     await req.Send("icon");
-                    await Task.Delay(5000); //wait a few seconds so it doesn't violently refresh in case something is broken
+                    await Task.Delay(2000); //wait a few seconds so it doesn't violently refresh in case something is broken
                     await req.Send("refresh");
                 }
                 //keep alive
