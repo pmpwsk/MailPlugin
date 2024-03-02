@@ -2,7 +2,6 @@
 using SmtpServer;
 using SmtpServer.Mail;
 using SmtpServer.Protocol;
-using SmtpServer.Storage;
 using System.Diagnostics.CodeAnalysis;
 using uwap.WebFramework.Mail;
 using static uwap.WebFramework.Mail.MailAuth;
@@ -61,17 +60,13 @@ public partial class MailPlugin : Plugin
         return false;
     }
 
-    public MailboxFilterResult AcceptMail(ISessionContext context, IMailbox from, IMailbox to)
+    public bool MailboxExists(ISessionContext context, IMailbox from, IMailbox to)
     {
         //Option 1: check if any addresses with that host domain exist (so that spammers/attackers can't scan for what mailboxes exist for a given domain)
-        if (Mailboxes.MailboxByAddress.Keys.Any(x => x.EndsWith('@' + to.Host)))
-            return MailboxFilterResult.Yes;
+        return Mailboxes.MailboxByAddress.Keys.Any(x => x.EndsWith('@' + to.Host));
 
         //Option 2: check if that exact recipient address exists
-        /*if (Mailboxes.MailboxByAddress.ContainsKey(from.AsAddress()))
-            return MailboxFilterResult.Yes;*/
-
-        return MailboxFilterResult.NoPermanently;
+        //return Mailboxes.MailboxByAddress.ContainsKey(from.AsAddress());
     }
 
     public SmtpResponse HandleMail(ISessionContext context, MimeMessage message, MailConnectionData connectionData)

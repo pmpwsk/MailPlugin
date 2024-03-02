@@ -10,7 +10,7 @@ public partial class MailPlugin : Plugin
 
         if (assignEvents)
         {
-            MailManager.In.AcceptMail += AcceptMail;
+            MailManager.In.MailboxExists += MailboxExists;
             MailManager.In.HandleMail += HandleMail;
             MailManager.Out.BeforeSend += BeforeSend;
         }
