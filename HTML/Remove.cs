@@ -42,6 +42,10 @@ public partial class MailPlugin : Plugin
 
     private static IEnumerable<IContent?> RemoveHTML(HtmlNode node, bool trimText = true)
     {
+        string style = node.GetAttributeValue("style", "");
+        if (style.Contains("display:none") || style.Contains("display: none"))
+            yield break;
+
         switch (node.Name)
         {
             case "#comment":
@@ -65,17 +69,16 @@ public partial class MailPlugin : Plugin
                 { //raw text
                     string inner = node.GetDirectInnerText();
                     if (trimText)
-                    {
-                        string trimmed = inner.Trim();
-                        if (trimmed == "")
-                            break;
-                    }
+                        inner = inner.Trim();
+                    if (inner == "")
+                        break;
                     yield return new Paragraph(inner.Replace("\n", " ").HtmlSafe());
                 }
                 break;
             case "u":
             case "i":
             case "b":
+            case "s":
                 //inline formatting
                 foreach (var c in RemoveHTMLChildren(node.ChildNodes, false))
                     yield return c;
@@ -124,7 +127,7 @@ public partial class MailPlugin : Plugin
                     string src = node.GetAttributeValue("src", "");
                     if (src == "")
                         break;
-                    else if (IsFullHttpUrl(src, out var domain))
+                    else if (IsFullHttpUrl(src, out var _))
                     {
                         yield return null;
                         yield return new Paragraph($"[external image]({src})");
@@ -151,7 +154,7 @@ public partial class MailPlugin : Plugin
                         else if (child.Name == "tr")
                         {
                             foreach (var childchild in child.ChildNodes)
-                                if (childchild.Name == "td")
+                                if (childchild.Name == "td" || childchild.Name == "th")
                                 {
                                     yield return null;
                                     foreach (var c in RemoveHTMLChildren(childchild.ChildNodes, false))

@@ -22,6 +22,10 @@ public partial class MailPlugin : Plugin
 
     private static IEnumerable<IContent?> ReadHTML(HtmlNode node, bool trimText = true)
     {
+        string style = node.GetAttributeValue("style", "");
+        if (style.Contains("display:none") || style.Contains("display: none"))
+            yield break;
+
         switch (node.Name)
         {
             case "#comment":
@@ -45,17 +49,16 @@ public partial class MailPlugin : Plugin
                 { //raw text
                     string inner = node.GetDirectInnerText();
                     if (trimText)
-                    {
-                        string trimmed = inner.Trim();
-                        if (trimmed == "")
+                        inner = inner.Trim();
+                    if (inner == "")
                             break;
-                    }
                     yield return new Paragraph(inner.Replace("\n", " ").HtmlSafe());
                 }
                 break;
             case "u":
             case "i":
             case "b":
+            case "s":
                 //inline formatting
                 foreach (var c in ReadHTMLChildren(node.ChildNodes, false))
                     if (c is Paragraph p)
@@ -75,14 +78,9 @@ public partial class MailPlugin : Plugin
                         if (inner != "")
                             yield return new Paragraph(inner.HtmlSafe());
                     }
-                    else
-                    {
-                        if (inner == "")
-                            inner = "[link without text]";
-                        if (IsFullHttpUrl(href, out var description) || (href.SplitAtFirst(':', out description, out _) && description != "javascript"))
-                            yield return new Paragraph($"<a href=\"{href}\" target=\"_blank\">{inner.HtmlSafe()} ({description})</a>");
+                    else if (IsFullHttpUrl(href, out var description) || (href.SplitAtFirst(':', out description, out _) && description != "javascript"))
+                        yield return new Paragraph($"<a href=\"{href}\" target=\"_blank\">{(inner == "" ? $"[{description}]" : $"{inner} ({description})").HtmlSafe()}</a>");
                     }
-                }
                 break;
             case "ul":
                 { //unordered list
@@ -114,6 +112,7 @@ public partial class MailPlugin : Plugin
                     {
                         yield return null;
                         yield return new Paragraph($"<a href=\"{src}\" target=\"_blank\">[external image on {domain} (dangerous!)]</a>");
+                            yield return new Paragraph($"<a href=\"{src}\" target=\"_blank\">[external image on {domain.HtmlSafe()} (dangerous!)]</a>");
                         yield return null;
                     }
                     else if (src.StartsWith("data:image/"))
@@ -184,7 +183,7 @@ public partial class MailPlugin : Plugin
                         else if (child.Name == "tr")
                         {
                             foreach (var childchild in child.ChildNodes)
-                                if (childchild.Name == "td")
+                                if (childchild.Name == "td" || childchild.Name == "th")
                                 {
                                     yield return null;
                                     foreach (var c in ReadHTMLChildren(childchild.ChildNodes, false))
@@ -282,5 +281,5 @@ public partial class MailPlugin : Plugin
     }
 
     private static string LineBreakIfEmpty(string text)
-        => text == "" ? "<br/>" : text;
+        => text.Replace("\xad", "") == "" ? "<br/>" : text;
 }

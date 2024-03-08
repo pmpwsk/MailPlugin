@@ -5,7 +5,7 @@ public partial class MailPlugin : Plugin
 {
     internal static string AddHTML(string text)
     {
-        string[] lines = text.Replace("\r", "").Trim().Split('\n');
+        string[] lines = text.Replace("&#13;", "").Replace("&#10;", "\n").Replace("\r", "").Trim().Split('\n');
         if (lines.Length == 0 || (lines.Length == 1 && lines[0] == ""))
             return "";
 
@@ -15,14 +15,14 @@ public partial class MailPlugin : Plugin
         foreach (var line in lines)
         {
             string trimmed = line.Trim();
-            if (trimmed.StartsWith('-'))
+            if (trimmed.StartsWith("- "))
             {
                 if (!listOpen)
                 {
                     result.Append("<ul>");
                     listOpen = true;
                 }
-                result.Append("<li>" + trimmed[1..].TrimStart() + "</li>");
+                result.Append("<li>" + trimmed[2..].TrimStart() + "</li>");
             }
             else
             {

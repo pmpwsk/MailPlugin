@@ -20,6 +20,10 @@ public partial class MailPlugin : Plugin
 
     private static IEnumerable<string?> QuoteHTML(HtmlNode node, bool trimText = true)
     {
+        string style = node.GetAttributeValue("style", "");
+        if (style.Contains("display:none") || style.Contains("display: none"))
+            yield break;
+
         switch (node.Name)
         {
             case "#comment":
@@ -43,17 +47,16 @@ public partial class MailPlugin : Plugin
                 { //raw text
                     string inner = node.GetDirectInnerText();
                     if (trimText)
-                    {
-                        string trimmed = inner.Trim();
-                        if (trimmed == "")
-                            break;
-                    }
+                        inner = inner.Trim();
+                    if (inner == "")
+                        break;
                     yield return inner.Replace("\n", " ");
                 }
                 break;
             case "u":
             case "i":
             case "b":
+            case "s":
                 //inline formatting
                 foreach (var c in QuoteHTMLChildren(node.ChildNodes, false))
                     if (c != null)
@@ -78,7 +81,7 @@ public partial class MailPlugin : Plugin
                         if (inner == "")
                             inner = "[link without text]";
                         if (IsFullHttpUrl(href, out _) || (href.SplitAtFirst(':', out var description, out _) && description != "javascript"))
-                            yield return $"<a href=\"{href}\">{inner})</a>";
+                            yield return $"<a href=\"{href}\">{inner}</a>";
                     }
                 }
                 break;
@@ -127,7 +130,7 @@ public partial class MailPlugin : Plugin
                         else if (child.Name == "tr")
                         {
                             foreach (var childchild in child.ChildNodes)
-                                if (childchild.Name == "td")
+                                if (childchild.Name == "td" || childchild.Name == "th")
                                 {
                                     yield return null;
                                     foreach (var c in QuoteHTMLChildren(childchild.ChildNodes, false))
