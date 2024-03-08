@@ -5,12 +5,12 @@ namespace uwap.WebFramework.Plugins;
 
 public partial class MailPlugin : Plugin
 {
-    internal static List<IContent> ReadHTML(string code)
+    internal static List<IContent> ReadHTML(string code, bool includeImageLinks)
     {
         HtmlDocument document = new();
         document.LoadHtml(code);
         List<IContent> result = [];
-        foreach (var c in ReadHTML(document.DocumentNode))
+        foreach (var c in ReadHTML(document.DocumentNode, includeImageLinks))
             if (c != null)
                 result.Add(c);
         while (result.Count != 0 && result.First() is Paragraph p && (p.Text == "" || p.Text == "<br/>"))
@@ -20,7 +20,7 @@ public partial class MailPlugin : Plugin
         return result;
     }
 
-    private static IEnumerable<IContent?> ReadHTML(HtmlNode node, bool trimText = true)
+    private static IEnumerable<IContent?> ReadHTML(HtmlNode node, bool includeImageLinks, bool trimText = true)
     {
         string style = node.GetAttributeValue("style", "");
         if (style.Contains("display:none") || style.Contains("display: none"))
@@ -41,7 +41,7 @@ public partial class MailPlugin : Plugin
             case "p":
                 //independent container elements
                 yield return null;
-                foreach (var c in ReadHTMLChildren(node.ChildNodes, false))
+                foreach (var c in ReadHTMLChildren(node.ChildNodes, includeImageLinks, false))
                     yield return c;
                 yield return null;
                 break;
@@ -51,7 +51,7 @@ public partial class MailPlugin : Plugin
                     if (trimText)
                         inner = inner.Trim();
                     if (inner == "")
-                            break;
+                        break;
                     yield return new Paragraph(inner.Replace("\n", " ").HtmlSafe());
                 }
                 break;
@@ -60,7 +60,7 @@ public partial class MailPlugin : Plugin
             case "b":
             case "s":
                 //inline formatting
-                foreach (var c in ReadHTMLChildren(node.ChildNodes, false))
+                foreach (var c in ReadHTMLChildren(node.ChildNodes, includeImageLinks, false))
                     if (c is Paragraph p)
                     {
                         if (p.Text != "<br/>")
@@ -80,18 +80,18 @@ public partial class MailPlugin : Plugin
                     }
                     else if (IsFullHttpUrl(href, out var description) || (href.SplitAtFirst(':', out description, out _) && description != "javascript"))
                         yield return new Paragraph($"<a href=\"{href}\" target=\"_blank\">{(inner == "" ? $"[{description}]" : $"{inner} ({description})").HtmlSafe()}</a>");
-                    }
+                }
                 break;
             case "ul":
                 { //unordered list
-                    var items = ReadItems(node.ChildNodes);
+                    var items = ReadItems(node.ChildNodes, includeImageLinks);
                     if (items.Count != 0)
                         yield return new BulletList(items);
                 }
                 break;
             case "ol":
                 { //ordered list
-                    var items = ReadItems(node.ChildNodes);
+                    var items = ReadItems(node.ChildNodes, includeImageLinks);
                     if (items.Count != 0)
                         yield return new OrderedList(items, node.GetAttributeValue("type", "") switch
                         {
@@ -111,9 +111,11 @@ public partial class MailPlugin : Plugin
                     else if (IsFullHttpUrl(src, out var domain))
                     {
                         yield return null;
-                        yield return new Paragraph($"<a href=\"{src}\" target=\"_blank\">[external image on {domain} (dangerous!)]</a>");
+                        if (includeImageLinks)
+                        {
                             yield return new Paragraph($"<a href=\"{src}\" target=\"_blank\">[external image on {domain.HtmlSafe()} (dangerous!)]</a>");
-                        yield return null;
+                            yield return null;
+                        }
                     }
                     else if (src.StartsWith("data:image/"))
                     {
@@ -177,7 +179,7 @@ public partial class MailPlugin : Plugin
                     foreach (var child in node.ChildNodes)
                         if (child.Name == "tbody")
                         {
-                            foreach (var c in ReadHTML(child))
+                            foreach (var c in ReadHTML(child, includeImageLinks))
                                 yield return c;
                         }
                         else if (child.Name == "tr")
@@ -186,7 +188,7 @@ public partial class MailPlugin : Plugin
                                 if (childchild.Name == "td" || childchild.Name == "th")
                                 {
                                     yield return null;
-                                    foreach (var c in ReadHTMLChildren(childchild.ChildNodes, false))
+                                    foreach (var c in ReadHTMLChildren(childchild.ChildNodes, includeImageLinks, false))
                                         yield return c;
                                     yield return null;
                                 }
@@ -199,13 +201,13 @@ public partial class MailPlugin : Plugin
             case "em":
             default:
                 //inline containers/formatting that won't be applied, or unrecognized element that will be treated like one
-                foreach (var c in ReadHTMLChildren(node.ChildNodes, false))
+                foreach (var c in ReadHTMLChildren(node.ChildNodes, includeImageLinks, false))
                     yield return c;
                 break;
         }
     }
 
-    private static IEnumerable<IContent?> ReadHTMLChildren(HtmlNodeCollection children, bool inlineOnly)
+    private static IEnumerable<IContent?> ReadHTMLChildren(HtmlNodeCollection children, bool includeImageLinks, bool inlineOnly)
     {
         string? buffer = null;
         foreach (var child in children)
@@ -222,7 +224,7 @@ public partial class MailPlugin : Plugin
                 continue;
             }
 
-            foreach (var c in ReadHTML(child, buffer == null))
+            foreach (var c in ReadHTML(child, includeImageLinks, buffer == null))
                 if (c != null && c is Paragraph p)
                 {
                     if (buffer == null)
@@ -250,14 +252,14 @@ public partial class MailPlugin : Plugin
         }
     }
 
-    private static List<string> ReadItems(HtmlNodeCollection children)
+    private static List<string> ReadItems(HtmlNodeCollection children, bool includeImageLinks)
     {
         List<string> result = [];
         foreach (var child in children)
             if (child.Name == "li")
             {
                 List<string> lines = [];
-                foreach (var c in ReadHTMLChildren(child.ChildNodes, true))
+                foreach (var c in ReadHTMLChildren(child.ChildNodes, includeImageLinks, true))
                     if (c is Paragraph p)
                         lines.Add(p.Text);
                 if (lines.Count != 0)
