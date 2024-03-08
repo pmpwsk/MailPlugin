@@ -41,6 +41,9 @@ public partial class MailPlugin : Plugin
         [DataMember]
         public readonly Dictionary<string, string> CustomSettings;
 
+        [DataMember]
+        public bool ShowExternalImageLinks = false;
+
         public Mailbox(string id, string address)
         {
             Id = id;
