@@ -279,7 +279,7 @@ public partial class MailPlugin : Plugin
                             c = File.ReadAllText(messagePath + "html");
                         if (c == null && hasText)
                             c = AddHTML(File.ReadAllText(messagePath + "text").HtmlSafe());
-                        List<IContent>? textContents = c == null ? null : ReadHTML(c);
+                        List<IContent>? textContents = c == null ? null : ReadHTML(c, mailbox.ShowExternalImageLinks);
                         if (textContents == null || (textContents.Count == 1 && textContents.First() is Paragraph p && (p.Text == "" || p.Text == "<br/>")))
                             e.Add(new ContainerElement("No text attached!", "", "red"));
                         else e.Add(new ContainerElement("Message", textContents));
@@ -454,7 +454,7 @@ public partial class MailPlugin : Plugin
                     string? c = null;
                     if (File.Exists(messagePath + "text"))
                         c = AddHTML(File.ReadAllText(messagePath + "text").Trim());
-                    List<IContent>? textContents = c == null ? null : ReadHTML(c);
+                    List<IContent>? textContents = c == null ? null : ReadHTML(c, true);
                     if (textContents == null || (textContents.Count == 1 && textContents.First() is Paragraph p && (p.Text == "" || p.Text == "<br/>")))
                         e.Add(new ContainerElement("No text attached!", "", "red"));
                     else e.Add(new ContainerElement("Message", textContents));
