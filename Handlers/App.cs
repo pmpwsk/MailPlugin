@@ -594,6 +594,7 @@ public partial class MailPlugin : Plugin
                     e.Add(new ButtonElement("Contacts", null, $"{pathPrefix}/settings/contacts?mailbox={mailbox.Id}"));
                     e.Add(new ContainerElement("Name", new TextBox("Enter a name...", mailbox.Name, "name-input", onEnter: "SaveName()", onInput: "NameChanged()")) { Button = new ButtonJS("Saved!", "SaveName()", id: "save-name") });
                     e.Add(new ContainerElement("Footer", new TextArea("Enter a footer...", mailbox.Footer, "footer-input", 5, onInput: "FooterChanged()")) { Button = new ButtonJS("Saved!", "SaveFooter()", id: "save-footer") });
+                    e.Add(new ContainerElement("External images", new Checkbox("Show external image links", "external-images", mailbox.ShowExternalImageLinks) { OnChange = "SaveExternalImages()" }) { Button = new ButtonJS("Saved!", "SaveExternalImages()", id: "save-external-images")});
                 }
                 break;
             case "/settings/folders":
