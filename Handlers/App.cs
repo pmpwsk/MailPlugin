@@ -15,6 +15,17 @@ public partial class MailPlugin : Plugin
         else return 0;
     }
 
+    private static ulong LastUnreadInboxMessageId(Mailbox mailbox, ulong after)
+    {
+        if (mailbox.Folders.TryGetValue("Inbox", out var inbox))
+            foreach (var id in inbox.Reverse())
+                if (id < after)
+                    return 0;
+                else if (mailbox.Messages.TryGetValue(id, out var message) && message.Unread)
+                    return id;
+        return 0;
+    }
+
     private static CustomScript IncomingScript(AppRequest req, ulong last, string pathPrefix)
     {
         string query = req.Context.Request.QueryString.HasValue ? req.Context.Request.QueryString.Value ?? "" : "";
