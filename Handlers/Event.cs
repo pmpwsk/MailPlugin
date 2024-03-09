@@ -30,16 +30,14 @@ public partial class MailPlugin : Plugin
         {
             case "/incoming":
                 req.Context.Response.OnCompleted(RemoveIncomingListener, req);
-                //mailboxes - refresh for all
-                //mailbox - refresh for mailbox, icon for all others
-                //inbox - refresh for mailbox, icon for all others
-                //other folder - icon for all
                 var mailboxes = Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : [];
-                ulong actualLast;
+                ulong actualLast, lastUnread;
+                ulong lastKnown = req.Query.TryGetValue("last", out ulong lk) ? lk : 0;
                 if (InvalidMailbox(req, out var mailbox))
                 {
                     req.Status = 200;
                     actualLast = mailboxes.Max(LastInboxMessageId);
+                    lastUnread = lastKnown == 0 ? 0 : mailboxes.Max(x => LastUnreadInboxMessageId(x, lastKnown));
                     //refresh on all mailboxes
                     foreach (var m in mailboxes)
                     {
@@ -51,6 +49,7 @@ public partial class MailPlugin : Plugin
                 else if ((!req.Query.TryGetValue("folder", out var folderName)) || folderName == "Inbox")
                 {
                     actualLast = LastInboxMessageId(mailbox);
+                    lastUnread = lastKnown == 0 ? 0 :LastUnreadInboxMessageId(mailbox, lastKnown);
                     //refresh for mailbox, icon for all others
                     foreach (var m in mailboxes)
                     {
@@ -62,6 +61,7 @@ public partial class MailPlugin : Plugin
                 else
                 {
                     actualLast = LastInboxMessageId(mailbox);
+                    lastUnread = lastKnown == 0 ? 0 : LastUnreadInboxMessageId(mailbox, lastKnown);
                     //icon for all mailboxes
                     foreach (var m in mailboxes)
                     {
@@ -71,11 +71,15 @@ public partial class MailPlugin : Plugin
                     }
                 }
                 //check if the event should already be called
-                if (req.Query.TryGetValue("last", out var lastString) && ulong.TryParse(lastString, out var last) && actualLast > last)
+                if (lastKnown != 0)
                 {
-                    await req.Send("icon");
-                    await Task.Delay(2000); //wait a few seconds so it doesn't violently refresh in case something is broken
-                    await req.Send("refresh");
+                    if (lastUnread > lastKnown)
+                        await req.Send("icon");
+                    if (actualLast > lastKnown)
+                    {
+                        await Task.Delay(2000); //wait a few seconds so it doesn't violently refresh in case something is broken
+                        await req.Send("refresh");
+                    }
                 }
                 //keep alive
                 await req.KeepAlive(req.Context.RequestAborted);
