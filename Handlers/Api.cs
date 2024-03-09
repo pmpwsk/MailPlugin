@@ -585,6 +585,20 @@ public partial class MailPlugin : Plugin
                     mailbox.UnlockSave();
                 }
                 break;
+            case "/set-external-images":
+                {
+                    if (InvalidMailbox(req, out var mailbox))
+                    { }
+                    else if (!req.Query.TryGetValue("value", out bool value))
+                        req.Status = 404;
+                    else if (mailbox.ShowExternalImageLinks != value)
+                    {
+                        mailbox.Lock();
+                        mailbox.ShowExternalImageLinks = value;
+                        mailbox.UnlockSave();
+                    }
+                }
+                break;
             case "/find":
                 {
                     if (InvalidMailbox(req, out var mailbox))
