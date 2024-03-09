@@ -2,6 +2,8 @@ let nameInput = document.querySelector("#name-input");
 let nameButton = document.querySelector("#save-name");
 let footerInput = document.querySelector("#footer-input");
 let footerButton = document.querySelector("#save-footer");
+let externalImagesInput = document.querySelector("#external-images");
+let externalImagesButton = document.querySelector("#save-external-images");
 
 function NameChanged() {
     nameButton.innerText = "Save";
@@ -25,7 +27,6 @@ async function SaveName() {
     }
     nameButton.innerText = "Save";
     nameButton.className = "green";
-    return false;
 }
 
 function FooterChanged() {
@@ -50,5 +51,23 @@ async function SaveFooter() {
     }
     footerButton.innerText = "Save";
     footerButton.className = "green";
-    return false;
+}
+
+async function SaveExternalImages() {
+    externalImagesButton.innerText = "Saving...";
+    externalImagesButton.className = "green";
+    try {
+        let response = await fetch("/api[PATH_PREFIX]/set-external-images?mailbox=" + GetQuery("mailbox") + "&value=" + externalImagesInput.checked);
+        if (response.status === 200) {
+            externalImagesButton.innerText = "Saved!";
+            externalImagesButton.className = "";
+            return;
+        } else {
+            ShowError("Connection failed.");
+        }
+    } catch {
+        ShowError("Connection failed.");
+    }
+    externalImagesButton.innerText = "Save";
+    externalImagesButton.className = "green";
 }
