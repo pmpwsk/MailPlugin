@@ -6,269 +6,261 @@ namespace uwap.WebFramework.Plugins;
 public partial class MailPlugin : Plugin
 {
     internal static List<IContent> ReadHTML(string code, bool includeImageLinks)
-    {
-        HtmlDocument document = new();
-        document.LoadHtml(code);
-        List<IContent> result = [];
-        foreach (var c in ReadHTML(document.DocumentNode, includeImageLinks))
-            if (c != null)
-                result.Add(c);
-        while (result.Count != 0 && result.First() is Paragraph p && (p.Text == "" || p.Text == "<br/>"))
-            result.RemoveAt(0);
-        while (result.Count != 0 && result.Last() is Paragraph p && (p.Text == "" || p.Text == "<br/>"))
-            result.RemoveAt(result.Count - 1);
-        return result;
-    }
+        => new HTMLReader(includeImageLinks).ReadHTML(code);
 
-    private static IEnumerable<IContent?> ReadHTML(HtmlNode node, bool includeImageLinks, bool trimText = true)
+    private class HTMLReader(bool includeImageLinks)
     {
-        string style = node.GetAttributeValue("style", "");
-        if (style.Contains("display:none") || style.Contains("display: none"))
-            yield break;
+        private List<IContent> Result = [];
+        private Paragraph? LastRealParagraph = null;
+        private readonly bool IncludeImageLinks = includeImageLinks;
 
-        switch (node.Name)
+        public List<IContent> ReadHTML(string code)
         {
-            case "#comment":
-            case "head":
-            case "script":
-            case "style":
-                //ignored
-                break;
-            case "#document":
-            case "html":
-            case "body":
-            case "div":
-            case "p":
-                //independent container elements
-                yield return null;
-                foreach (var c in ReadHTMLChildren(node.ChildNodes, includeImageLinks, false))
-                    yield return c;
-                yield return null;
-                break;
-            case "#text":
-                { //raw text
-                    string inner = node.GetDirectInnerText();
-                    if (trimText)
-                        inner = inner.Trim();
-                    if (inner == "")
-                        break;
-                    yield return new Paragraph(inner.Replace("\n", " ").HtmlSafe());
+            HtmlDocument document = new();
+            document.LoadHtml(code);
+
+            ReadHTML(document.DocumentNode);
+
+            foreach (var c in Result)
+                if (c is Paragraph p)
+                {
+                    p.Text = p.Text.Trim();
+                    if (p.Text.Replace("\xad", "") == "")
+                        p.Text = "<br/>";
                 }
-                break;
-            case "u":
-            case "i":
-            case "b":
-            case "s":
-                //inline formatting
-                foreach (var c in ReadHTMLChildren(node.ChildNodes, includeImageLinks, false))
-                    if (c is Paragraph p)
-                    {
-                        if (p.Text != "<br/>")
-                            p.Text = $"<{node.Name}>{p.Text}</{node.Name}>";
-                        yield return p;
-                    }
-                    else yield return c;
-                break;
-            case "a":
-                { //link
-                    string inner = node.InnerText.Trim();
-                    string href = node.GetAttributeValue("href", "");
-                    if (href == "")
-                    {
-                        if (inner != "")
-                            yield return new Paragraph(inner.HtmlSafe());
-                    }
-                    else if (IsFullHttpUrl(href, out var description) || (href.SplitAtFirst(':', out description, out _) && description != "javascript"))
-                        yield return new Paragraph($"<a href=\"{href}\" target=\"_blank\">{(inner == "" ? $"[{description}]" : $"{inner} ({description})").HtmlSafe()}</a>");
-                }
-                break;
-            case "ul":
-                { //unordered list
-                    var items = ReadItems(node.ChildNodes, includeImageLinks);
-                    if (items.Count != 0)
-                        yield return new BulletList(items);
-                }
-                break;
-            case "ol":
-                { //ordered list
-                    var items = ReadItems(node.ChildNodes, includeImageLinks);
-                    if (items.Count != 0)
-                        yield return new OrderedList(items, node.GetAttributeValue("type", "") switch
+
+            while (Result.Count != 0 && Result.First() is Paragraph p && p.Text == "<br/>")
+                Result.RemoveAt(0);
+            while (Result.Count != 0 && Result.Last() is Paragraph p && p.Text == "<br/>")
+                Result.RemoveAt(Result.Count - 1);
+
+            return Result;
+        }
+
+        private void ReadHTML(HtmlNode node)
+        {
+            string style = node.GetAttributeValue("style", "");
+            if (style.Contains("display:none") || style.Contains("display: none"))
+                return;
+
+            switch (node.Name)
+            {
+                case "#comment":
+                case "head":
+                case "script":
+                case "style":
+                    //ignored
+                    break;
+                case "br":
+                case "hr":
+                    LastRealParagraph = new Paragraph("");
+                    Result.Add(LastRealParagraph);
+                    break;
+                case "#text":
+                    { //raw text
+                        string inner = node.GetDirectInnerText().Replace("\n", " ").HtmlSafe();
+                        if (LastRealParagraph != null)
                         {
-                            "A" => OrderedList.Types.LettersUppercase,
-                            "a" => OrderedList.Types.LettersLowercase,
-                            "I" => OrderedList.Types.RomanNumbersUppercase,
-                            "i" => OrderedList.Types.RomanNumbersLowercase,
-                            _ => OrderedList.Types.Numbers
-                        });
-                }
-                break;
-            case "img":
-                { //image
-                    string src = node.GetAttributeValue("src", "");
-                    if (src == "")
-                        break;
-                    else if (IsFullHttpUrl(src, out var domain))
-                    {
-                        yield return null;
-                        if (includeImageLinks)
+                            if (LastRealParagraph.Text != "" || inner.Trim() != "")
+                                LastRealParagraph.Text += inner;
+                        }
+                        else if (inner.Trim() != "")
                         {
-                            yield return new Paragraph($"<a href=\"{src}\" target=\"_blank\">[external image on {domain.HtmlSafe()} (dangerous!)]</a>");
-                            yield return null;
+                            LastRealParagraph = new(inner);
+                            Result.Add(LastRealParagraph);
                         }
                     }
-                    else if (src.StartsWith("data:image/"))
-                    {
-                        string defMaxHeight = "5rem";
-                        string defMaxWidth = "calc(100% - 0.05rem)";
-                        string? height = null;
-                        string? width = null;
-                        string? maxHeight = null;
-                        string? maxWidth = null;
-                        foreach (var attribute in node.GetAttributeValue("style", "").Split(';').Select(x => x.Trim().ToLower()).Where(x => x != ""))
+                    break;
+                case "a":
+                    { //link
+                        string inner = node.InnerText.Trim();
+                        string href = node.GetAttributeValue("href", "");
+                        string? code = null;
+                        if (href == "")
                         {
-                            if (!attribute.SplitAtFirst(':', out var key, out var value))
-                                continue;
-                            key = key.TrimEnd();
-                            value = value.TrimStart();
-                            string? unit = null;
-                            switch (key)
+                            if (inner != "")
+                                code = inner.HtmlSafe();
+                        }
+                        else if (IsFullHttpUrl(href, out var description) || (href.SplitAtFirst(':', out description, out _) && description != "javascript"))
+                            code = $"<a href=\"{href}\" target=\"_blank\">{(inner == "" ? $"[{description}]" : $"{inner} ({description})").HtmlSafe()}</a>";
+
+                        if (code != null)
+                            if (LastRealParagraph == null)
                             {
-                                case "height":
-                                case "width":
-                                case "max-height":
-                                case "max-width":
-                                    break;
-                                default:
+                                LastRealParagraph = new(code);
+                                Result.Add(LastRealParagraph);
+                            }
+                            else LastRealParagraph.Text += code;
+                    }
+                    break;
+                case "ul":
+                    { //unordered list
+                        var items = ReadItems(node.ChildNodes);
+                        if (items.Count != 0)
+                        {
+                            LastRealParagraph = null;
+                            Result.Add(new BulletList(items));
+                        }
+                    }
+                    break;
+                case "ol":
+                    { //ordered list
+                        var items = ReadItems(node.ChildNodes);
+                        if (items.Count != 0)
+                        {
+                            LastRealParagraph = null;
+                            Result.Add(new OrderedList(items, node.GetAttributeValue("type", "") switch
+                            {
+                                "A" => OrderedList.Types.LettersUppercase,
+                                "a" => OrderedList.Types.LettersLowercase,
+                                "I" => OrderedList.Types.RomanNumbersUppercase,
+                                "i" => OrderedList.Types.RomanNumbersLowercase,
+                                _ => OrderedList.Types.Numbers
+                            }));
+                        }
+                    }
+                    break;
+                case "img":
+                    { //image
+                        string src = node.GetAttributeValue("src", "");
+                        if (src == "")
+                            break;
+                        else if (IsFullHttpUrl(src, out var domain))
+                        {
+                            LastRealParagraph = null;
+                            if (IncludeImageLinks)
+                                Result.Add(new Paragraph($"<a href=\"{src}\" target=\"_blank\">[external image on {domain.HtmlSafe()} (dangerous!)]</a>"));
+                        }
+                        else if (src.StartsWith("data:image/"))
+                        {
+                            string defMaxHeight = "5rem";
+                            string defMaxWidth = "calc(100% - 0.05rem)";
+                            string? height = null;
+                            string? width = null;
+                            string? maxHeight = null;
+                            string? maxWidth = null;
+                            foreach (var attribute in node.GetAttributeValue("style", "").Split(';').Select(x => x.Trim().ToLower()).Where(x => x != ""))
+                            {
+                                if (!attribute.SplitAtFirst(':', out var key, out var value))
                                     continue;
-                            }
-                            foreach (var u in new[] { "cm", "mm", "in", "px", "pt", "pc", "rem", "em", "ex", "ch", "vw", "vh", "vmin", "vmax", "%" })
-                                if (value.EndsWith(u))
+                                key = key.TrimEnd();
+                                value = value.TrimStart();
+                                string? unit = null;
+                                switch (key)
                                 {
-                                    unit = u;
-                                    value = value[..^u.Length];
-                                    break;
+                                    case "height":
+                                    case "width":
+                                    case "max-height":
+                                    case "max-width":
+                                        break;
+                                    default:
+                                        continue;
                                 }
-                            if (!double.TryParse(value, out var valueWithoutUnit))
-                                continue;
-                            unit ??= "px";
-                            switch (key)
-                            {
-                                case "height":
-                                    height = $"height:{valueWithoutUnit}{unit}";
-                                    break;
-                                case "width":
-                                    width = $"width:min({defMaxWidth},{valueWithoutUnit}{unit})";
-                                    break;
-                                case "max-height":
-                                    maxHeight = $"max-height:{valueWithoutUnit}{unit}";
-                                    break;
-                                case "max-width":
-                                    maxWidth = $"max-width:min({defMaxWidth},{valueWithoutUnit}{unit})";
-                                    break;
-                            }
-                        }
-                        yield return new Image(src, $"{height ?? maxHeight ?? $"max-height:{defMaxHeight}"};{width ?? maxWidth ?? $"max-width:{defMaxWidth}"}");
-                    }
-                }
-                break;
-            case "table":
-            case "tbody":
-                { //table
-                    yield return null;
-                    foreach (var child in node.ChildNodes)
-                        if (child.Name == "tbody")
-                        {
-                            foreach (var c in ReadHTML(child, includeImageLinks))
-                                yield return c;
-                        }
-                        else if (child.Name == "tr")
-                        {
-                            foreach (var childchild in child.ChildNodes)
-                                if (childchild.Name == "td" || childchild.Name == "th")
+                                foreach (var u in new[] { "cm", "mm", "in", "px", "pt", "pc", "rem", "em", "ex", "ch", "vw", "vh", "vmin", "vmax", "%" })
+                                    if (value.EndsWith(u))
+                                    {
+                                        unit = u;
+                                        value = value[..^u.Length];
+                                        break;
+                                    }
+                                if (!double.TryParse(value, out var valueWithoutUnit))
+                                    continue;
+                                unit ??= "px";
+                                switch (key)
                                 {
-                                    yield return null;
-                                    foreach (var c in ReadHTMLChildren(childchild.ChildNodes, includeImageLinks, false))
-                                        yield return c;
-                                    yield return null;
+                                    case "height":
+                                        height = $"height:{valueWithoutUnit}{unit}";
+                                        break;
+                                    case "width":
+                                        width = $"width:min({defMaxWidth},{valueWithoutUnit}{unit})";
+                                        break;
+                                    case "max-height":
+                                        maxHeight = $"max-height:{valueWithoutUnit}{unit}";
+                                        break;
+                                    case "max-width":
+                                        maxWidth = $"max-width:min({defMaxWidth},{valueWithoutUnit}{unit})";
+                                        break;
                                 }
+                            }
+                            LastRealParagraph = null;
+                            Result.Add(new Image(src, $"{height ?? maxHeight ?? $"max-height:{defMaxHeight}"};{width ?? maxWidth ?? $"max-width:{defMaxWidth}"}"));
                         }
-                    yield return null;
-                }
-                break;
-            case "span":
-            case "strong":
-            case "em":
-            default:
-                //inline containers/formatting that won't be applied, or unrecognized element that will be treated like one
-                foreach (var c in ReadHTMLChildren(node.ChildNodes, includeImageLinks, false))
-                    yield return c;
-                break;
-        }
-    }
-
-    private static IEnumerable<IContent?> ReadHTMLChildren(HtmlNodeCollection children, bool includeImageLinks, bool inlineOnly)
-    {
-        string? buffer = null;
-        foreach (var child in children)
-        {
-            if (child.Name == "br" || child.Name == "hr")
-            {
-                if (buffer != null)
-                {
-                    yield return null;
-                    yield return new Paragraph(LineBreakIfEmpty(buffer.TrimEnd()));
-                    yield return null;
-                }
-                buffer = "";
-                continue;
-            }
-
-            foreach (var c in ReadHTML(child, includeImageLinks, buffer == null))
-                if (c != null && c is Paragraph p)
-                {
-                    if (buffer == null)
-                        buffer = p.Text.TrimStart();
-                    else buffer += p.Text;
-                }
-                else if (!inlineOnly)
-                {
-                    if (buffer != null)
-                    {
-                        yield return null;
-                        yield return new Paragraph(LineBreakIfEmpty(buffer.TrimEnd()));
-                        yield return null;
-                        buffer = null;
                     }
-                    yield return c;
-                }
-        }
+                    break;
+                case "u":
+                case "i":
+                case "b":
+                case "s":
+                    { //inline formatting
+                        int oldCount = Result.Count;
+                        Paragraph? lrp = LastRealParagraph;
 
-        if (buffer != null)
-        {
-            yield return new Paragraph(LineBreakIfEmpty(buffer.TrimEnd()));
-            if (buffer == "")
-                yield return null;
-        }
-    }
+                        if (lrp != null)
+                            lrp.Text += $"<{node.Name}>";
+                        foreach (var c in node.ChildNodes)
+                            ReadHTML(c);
+                        if (lrp != null)
+                            lrp.Text += $"</{node.Name}>";
 
-    private static List<string> ReadItems(HtmlNodeCollection children, bool includeImageLinks)
-    {
-        List<string> result = [];
-        foreach (var child in children)
-            if (child.Name == "li")
-            {
-                List<string> lines = [];
-                foreach (var c in ReadHTMLChildren(child.ChildNodes, includeImageLinks, true))
-                    if (c is Paragraph p)
-                        lines.Add(p.Text);
-                if (lines.Count != 0)
-                    result.Add(string.Join(' ', lines));
+                        foreach (var c in Result.Skip(oldCount))
+                            if (c is Paragraph p && p.Text.Trim().Replace("\xad", "") != "")
+                                p.Text = $"<{node.Name}>{p.Text}</{node.Name}>";
+                    }
+                    break;
+                case "#document":
+                case "html":
+                case "body":
+                case "div":
+                case "p":
+                case "table":
+                case "tbody":
+                case "tr":
+                case "th":
+                case "td":
+                    //independent container elements
+                    LastRealParagraph = null;
+                    foreach (var c in node.ChildNodes)
+                        ReadHTML(c);
+                    LastRealParagraph = null;
+                    break;
+                case "span":
+                case "strong":
+                case "em":
+                case "li":
+                default:
+                    //inline containers/formatting that won't be applied, or unrecognized element that will be treated like one
+                    foreach (var c in node.ChildNodes)
+                        ReadHTML(c);
+                    break;
             }
-        return result;
+        }
+
+        private List<string> ReadItems(HtmlNodeCollection children)
+        {
+            List<string> result = [];
+            foreach (var child in children)
+                if (child.Name == "li")
+                {
+                    var oldResult = Result;
+                    Result = [];
+                    LastRealParagraph = null;
+
+                    ReadHTML(child);
+                    List<string> lines = [];
+                    foreach (var c in Result)
+                        if (c is Paragraph p && p.Text.Trim().Replace("\xad", "") != "")
+                            lines.Add(p.Text);
+                    if (lines.Count != 0)
+                        result.Add(string.Join(' ', lines));
+
+                    Result = oldResult;
+                    LastRealParagraph = null;
+                }
+            return result;
+        }
     }
 
-    public static bool IsFullHttpUrl(string url, [MaybeNullWhen(false)] out string domain)
+    private static bool IsFullHttpUrl(string url, [MaybeNullWhen(false)] out string domain)
     {
         domain = null;
 
@@ -281,7 +273,4 @@ public partial class MailPlugin : Plugin
         domain = url.Before('/').After('@');
         return true;
     }
-
-    private static string LineBreakIfEmpty(string text)
-        => text.Replace("\xad", "") == "" ? "<br/>" : text;
 }
