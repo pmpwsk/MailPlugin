@@ -16,6 +16,11 @@ public partial class MailPlugin : Plugin
         {
             case "/save-draft":
                 {
+                    if (req.IsForm)
+                    {
+                        req.Status = 400;
+                        break;
+                    }
                     if (InvalidMailbox(req, out var mailbox))
                         break;
                     if (mailbox.Messages.TryGetValue(0, out var message))
@@ -56,6 +61,34 @@ public partial class MailPlugin : Plugin
                     File.WriteAllText($"../Mail/{mailbox.Id}/0/text", text);
 
                     await req.Write("ok");
+                    mailbox.UnlockSave();
+                }
+                break;
+            case "/upload-attachment":
+                {
+                    if ((!req.IsForm) || req.Files.Count != 1)
+                    {
+                        req.Status = 400;
+                        break;
+                    }
+                    if (InvalidMailbox(req, out var mailbox))
+                        break;
+                    mailbox.Lock();
+                    if (mailbox.Messages.TryGetValue(0, out var message))
+                    {
+                        message.From = new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address);
+                    }
+                    else
+                    {
+                        message = new(new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address), [], "", null);
+                        mailbox.Messages[0] = message;
+                    }
+                    Directory.CreateDirectory($"../Mail/{mailbox.Id}/0");
+                    var file = req.Files[0];
+                    int attachmentId = message.Attachments.Count;
+                    if (file.Download($"../Mail/{mailbox.Id}/0/{attachmentId}", 10485760))
+                        message.Attachments.Add(new(file.FileName?.Trim()?.HtmlSafe(), file.ContentType?.Trim()?.HtmlSafe()));
+                    else req.Status = 413;
                     mailbox.UnlockSave();
                 }
                 break;
