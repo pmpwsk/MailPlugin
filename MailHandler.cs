@@ -109,7 +109,11 @@ public partial class MailPlugin : Plugin
                 foreach (var attachment in message.Attachments)
                 {
                     using var stream = File.OpenWrite($"../Mail/{mailbox.Id}/{messageId}/{attachmentIndex}");
-                    ((MimePart)attachment).Content.DecodeTo(stream);
+                    if (attachment is MessagePart messagePart)
+                        messagePart.Message.WriteTo(stream);
+                    else if (attachment is MimePart mimePart)
+                        mimePart.Content.DecodeTo(stream);
+                    else Console.WriteLine($"UNRECOGNIZED MAIL ATTACHMENT TYPE {attachment.GetType().FullName}");
                     stream.Flush();
                     stream.Close();
                     stream.Dispose();
