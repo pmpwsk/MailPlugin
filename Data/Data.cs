@@ -41,6 +41,8 @@ public partial class MailPlugin : Plugin
     private static readonly string[] FileSizeUnits = ["B", "KB", "MB", "GB", "TB", "PB", "EB"];
     private static string FileSizeString(long size)
     {
+        if (size == 0)
+            return $"0 {FileSizeUnits[0]}";
         int factor = (int)Math.Floor(Math.Log(size, 1000));
         if (factor >= FileSizeUnits.Length)
             factor = FileSizeUnits.Length - 1;
