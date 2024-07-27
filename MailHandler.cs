@@ -48,7 +48,7 @@ public partial class MailPlugin : Plugin
             foreach (var listenerKKV in listenerKV)
                 try
                 {
-                    listenerKKV.Key.Send(listenerKKV.Value ? "refresh" : "icon").GetAwaiter().GetResult();
+                    listenerKKV.Key.EventMessage(listenerKKV.Value ? "refresh" : "icon").GetAwaiter().GetResult();
                 }
                 catch
                 {
@@ -123,7 +123,7 @@ public partial class MailPlugin : Plugin
                     foreach (var listenerKKV in listenerKV)
                         try
                         {
-                            listenerKKV.Key.Send(listenerKKV.Value ? "refresh" : "icon").GetAwaiter().GetResult();
+                            listenerKKV.Key.EventMessage(listenerKKV.Value ? "refresh" : "icon").GetAwaiter().GetResult();
                         }
                         catch
                         {

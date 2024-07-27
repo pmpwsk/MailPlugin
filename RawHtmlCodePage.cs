@@ -11,7 +11,7 @@ public partial class MailPlugin : Plugin
             Code = code;
         }
 
-        public IEnumerable<string> Export(AppRequest _)
+        public IEnumerable<string> Export(Request _)
         {
             yield return Code;
         }

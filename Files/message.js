@@ -1,49 +1,33 @@
 async function Delete() {
-    let deleteText = document.querySelector("#deleteButton");
-    if (deleteText.textContent === "Delete") {
+    var deleteText = document.getElementById("deleteButton");
+    if (deleteText.textContent === "Delete")
         deleteText.textContent = "Delete?";
-    } else {
-        let response = await fetch("/api[PATH_PREFIX]/delete-message?mailbox=" + GetQuery("mailbox") + "&folder=" + GetQuery("folder") + "&message=" + GetQuery("message"));
-        if (response.status === 200) {
-            let text = await response.text();
-            if (text == "ok") {
-                window.location.assign("[PATH_HOME]?mailbox=" + GetQuery("mailbox") + "&folder=" + GetQuery("folder"));
-            } else {
-                ShowError("Connection failed.");
-            }
-        } else {
-            ShowError("Connection failed.");
-        }
-    }
+    else if (await SendRequest(`delete-message?mailbox=${GetQuery("mailbox")}&folder=${encodeURIComponent(GetQuery("folder"))}&message=${GetQuery("message")}`, "POST", true) === 200)
+        window.location.assign(`.?mailbox=${GetQuery("mailbox")}&folder=${GetQuery("folder")}`);
+    else ShowError("Connection failed.");
 }
 
 async function Unread() {
-    let response = await fetch("/api[PATH_PREFIX]/unread?mailbox=" + GetQuery("mailbox") + "&folder=" + GetQuery("folder") + "&message=" + GetQuery("message"))
-    if (response.status === 200) {
-        window.location.assign("[PATH_HOME]?mailbox=" + GetQuery("mailbox") + "&folder=" + GetQuery("folder"));
-    } else {
-        ShowError("Connection failed.");
-    }
+    if (await SendRequest(`unread?mailbox=${GetQuery("mailbox")}&folder=${encodeURIComponent(GetQuery("folder"))}&message=${GetQuery("message")}`, "POST", true) === 200)
+        window.location.assign(`.?mailbox=${GetQuery("mailbox")}&folder=${encodeURIComponent(GetQuery("folder"))}`);
+    else ShowError("Connection failed.");
 }
 
 async function Reply() {
-    let response = await fetch("/api[PATH_PREFIX]/reply?mailbox=" + GetQuery("mailbox") + "&folder=" + GetQuery("folder") + "&message=" + GetQuery("message"));
-    if (response.status === 200) {
-        window.location.assign("[PATH_PREFIX]/send?mailbox=" + GetQuery("mailbox"));
-    } else {
-        ShowError("Connection failed.");
-    }
+    if (await SendRequest(`reply?mailbox=${GetQuery("mailbox")}&folder=${encodeURIComponent(GetQuery("folder"))}&message=${GetQuery("message")}`, "POST", true) === 200)
+        window.location.assign(`send?mailbox=${GetQuery("mailbox")}`);
+    else ShowError("Connection failed.");
 }
 
 async function FindOriginal(encodedMessageId) {
-    let b = document.querySelector("#find");
+    var b = document.getElementById("find");
     b.textContent = "finding...";
-    let response = await fetch("/api[PATH_PREFIX]/find?mailbox=" + GetQuery("mailbox") + "&id=" + encodedMessageId);
+    var response = await fetch(`find?mailbox=${GetQuery("mailbox")}&id=${encodedMessageId}`, {method: "POST"});
     b.textContent = "find";
     if (response.status === 200) {
-        let text = await response.text();
+        var text = await response.text();
         if (text.startsWith("mailbox=")) {
-            window.location.assign("[PATH_HOME]?" + text);
+            window.location.assign(`.?${text}`);
             return;
         }
         else if (text === "no") {

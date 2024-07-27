@@ -11,7 +11,7 @@ public partial class MailPlugin : Plugin
             FilePath = filePath;
         }
 
-        public IEnumerable<string> Export(AppRequest _)
+        public IEnumerable<string> Export(Request _)
         {
             if (File.Exists(FilePath))
             {

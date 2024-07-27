@@ -1,7 +1,7 @@
 {
   "name": "Mail ([DOMAIN_MAIN])",
   "short_name": "Mail",
-  "start_url": "[PATH_HOME]",
+  "start_url": "[PATH_PREFIX]/",
   "display": "minimal-ui",
   "background_color": "#000000",
   "theme_color": "#202024",
