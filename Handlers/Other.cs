@@ -167,7 +167,7 @@ public partial class MailPlugin : Plugin
                         message.Unread = false;
                         mailbox.UnlockSave();
                     }
-                    string messagePath = $"../Mail/{mailboxId}/{messageId}/";
+                    string messagePath = $"../MailPlugin.Mailboxes/{mailboxId}/{messageId}/";
                     if (req.Query.TryGetValue("view", out var view))
                     {
                         switch (view)
@@ -183,7 +183,7 @@ public partial class MailPlugin : Plugin
                                     req.Page = new RawHtmlCodePage(code);
                                 } break;
                             case "load-html":
-                                req.Page = new RawHtmlFilePage($"../Mail/{mailboxId}/{messageId}/html");
+                                req.Page = new RawHtmlFilePage($"../MailPlugin.Mailboxes/{mailboxId}/{messageId}/html");
                                 break;
                             default:
                                 throw new BadRequestSignal();
@@ -262,7 +262,7 @@ public partial class MailPlugin : Plugin
                             [
                                 new Paragraph("File: " + attachment.Name ?? "Unknown name"),
                                 new Paragraph("Type: " + attachment.MimeType ?? "Unknown type"),
-                                new Paragraph("Size: " + FileSizeString(new FileInfo($"../Mail/{mailbox.Id}/{messageId}/{attachmentId}").Length))
+                                new Paragraph("Size: " + FileSizeString(new FileInfo($"../MailPlugin.Mailboxes/{mailbox.Id}/{messageId}/{attachmentId}").Length))
                             ]) { Buttons =
                                 [
                                     new Button("View", $"attachment?mailbox={mailboxId}&message={messageId}&attachment={attachmentId}&download=false", newTab: true),
@@ -298,7 +298,7 @@ public partial class MailPlugin : Plugin
                     throw new BadRequestSignal();
                 if (attachmentId < 0 || attachmentId >= message.Attachments.Count)
                     throw new NotFoundSignal();
-                string filePath = $"../Mail/{mailbox.Id}/{messageId}/{attachmentId}";
+                string filePath = $"../MailPlugin.Mailboxes/{mailbox.Id}/{messageId}/{attachmentId}";
                 if (!File.Exists(filePath))
                     throw new ServerErrorSignal();
                 MailAttachment attachment = message.Attachments[attachmentId];
@@ -315,7 +315,7 @@ public partial class MailPlugin : Plugin
                 mailbox.Lock();
                 if (folderName == "Trash")
                 {
-                    string messagePath = $"../Mail/{mailbox.Id}/{messageId}";
+                    string messagePath = $"../MailPlugin.Mailboxes/{mailbox.Id}/{messageId}";
                     if (Directory.Exists(messagePath))
                         Directory.Delete(messagePath, true);
                     mailbox.Messages.Remove(messageId);
@@ -350,7 +350,7 @@ public partial class MailPlugin : Plugin
                     throw new BadRequestSignal();
                 mailbox.Lock();
                 string? text = null;
-                string messagePath = $"../Mail/{mailbox.Id}/{messageId}/";
+                string messagePath = $"../MailPlugin.Mailboxes/{mailbox.Id}/{messageId}/";
                 if (File.Exists(messagePath + "html"))
                     text = File.ReadAllText(messagePath + "html");
                 if (text == null && File.Exists(messagePath + "text"))
@@ -367,8 +367,8 @@ public partial class MailPlugin : Plugin
                     subject = realSubject.TrimStart();
                 string toAddress = (message.ReplyTo ?? message.From).Address;
                 mailbox.Messages[0] = new(new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address), [new MailAddress(toAddress, mailbox.Contacts.TryGetValue(toAddress, out var contact) ? contact.Name : toAddress)], "Re: " + subject, message.MessageId);
-                Directory.CreateDirectory($"../Mail/{mailbox.Id}/0");
-                File.WriteAllText($"../Mail/{mailbox.Id}/0/text", text ?? "");
+                Directory.CreateDirectory($"../MailPlugin.Mailboxes/{mailbox.Id}/0");
+                File.WriteAllText($"../MailPlugin.Mailboxes/{mailbox.Id}/0/text", text ?? "");
                 mailbox.UnlockSave();
             } break;
 

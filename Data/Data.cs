@@ -5,7 +5,7 @@ namespace uwap.WebFramework.Plugins;
 
 public partial class MailPlugin : Plugin
 {
-    private readonly MailboxTable Mailboxes = MailboxTable.Import("Mail");
+    private readonly MailboxTable Mailboxes = MailboxTable.Import("MailPlugin.Mailboxes");
 
     private static readonly IEnumerable<string> DefaultFolders = ["Inbox", "Sent", "Trash", "Spam"];
 

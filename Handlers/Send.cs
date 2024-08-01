@@ -26,7 +26,7 @@ public partial class MailPlugin : Plugin
                     subject = message.Subject;
                     if (subject == "")
                         subject = null;
-                    text = File.Exists($"../Mail/{mailbox.Id}/0/text") ? File.ReadAllText($"../Mail/{mailbox.Id}/0/text") : null;
+                    text = File.Exists($"../MailPlugin.Mailboxes/{mailbox.Id}/0/text") ? File.ReadAllText($"../MailPlugin.Mailboxes/{mailbox.Id}/0/text") : null;
                     if (text == "")
                         text = null;
                 }
@@ -122,8 +122,8 @@ public partial class MailPlugin : Plugin
 
                 WriteText:
                 string text = await req.GetBodyText();
-                Directory.CreateDirectory($"../Mail/{mailbox.Id}/0");
-                File.WriteAllText($"../Mail/{mailbox.Id}/0/text", text);
+                Directory.CreateDirectory($"../MailPlugin.Mailboxes/{mailbox.Id}/0");
+                File.WriteAllText($"../MailPlugin.Mailboxes/{mailbox.Id}/0/text", text);
 
                 await req.Write("ok");
                 mailbox.UnlockSave();
@@ -137,8 +137,8 @@ public partial class MailPlugin : Plugin
                     break;
                 mailbox.Lock();
                 mailbox.Messages.Remove(0);
-                if (Directory.Exists($"../Mail/{mailbox.Id}/0"))
-                    Directory.Delete($"../Mail/{mailbox.Id}/0", true);
+                if (Directory.Exists($"../MailPlugin.Mailboxes/{mailbox.Id}/0"))
+                    Directory.Delete($"../MailPlugin.Mailboxes/{mailbox.Id}/0", true);
                 mailbox.UnlockSave();
             } break;
                 
@@ -161,7 +161,7 @@ public partial class MailPlugin : Plugin
                     await req.Write("invalid-to");
                     break;
                 }
-                string text = File.Exists($"../Mail/{mailbox.Id}/0/text") ? File.ReadAllText($"../Mail/{mailbox.Id}/0/text").Trim() : "";
+                string text = File.Exists($"../MailPlugin.Mailboxes/{mailbox.Id}/0/text") ? File.ReadAllText($"../MailPlugin.Mailboxes/{mailbox.Id}/0/text").Trim() : "";
                 if (text == "")
                 {
                     await req.Write("invalid-text");
@@ -172,15 +172,15 @@ public partial class MailPlugin : Plugin
                 message.From = new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address);
                 string htmlPart = AddHTML(text);
                 string textPart = RemoveHTML(htmlPart);
-                File.WriteAllText($"../Mail/{mailbox.Id}/0/html", htmlPart);
-                File.WriteAllText($"../Mail/{mailbox.Id}/0/text", textPart);
+                File.WriteAllText($"../MailPlugin.Mailboxes/{mailbox.Id}/0/html", htmlPart);
+                File.WriteAllText($"../MailPlugin.Mailboxes/{mailbox.Id}/0/text", textPart);
                 MailGen msg = new(new(message.From.Name, message.From.Address), message.To.Select(x => new MailboxAddress(x.Name, x.Address)), message.Subject, textPart, htmlPart);
                 if (message.InReplyToId != null)
                     msg.IsReplyToMessageId = message.InReplyToId;
                 int counter = 0;
                 foreach (var attachment in message.Attachments)
                 {
-                    msg.Attachments.Add(new($"../Mail/{mailbox.Id}/0/{counter}", string.IsNullOrEmpty(attachment.Name) ? "Unknown name" : attachment.Name, attachment.MimeType));
+                    msg.Attachments.Add(new($"../MailPlugin.Mailboxes/{mailbox.Id}/0/{counter}", string.IsNullOrEmpty(attachment.Name) ? "Unknown name" : attachment.Name, attachment.MimeType));
                     counter++;
                 }
                 var result = MailManager.Out.Send(msg, out var messageIds);
@@ -210,7 +210,7 @@ public partial class MailPlugin : Plugin
                     messageId++;
                 mailbox.Messages[messageId] = message;
                 mailbox.Folders["Sent"].Add(messageId);
-                Directory.Move($"../Mail/{mailbox.Id}/0", $"../Mail/{mailbox.Id}/{messageId}");
+                Directory.Move($"../MailPlugin.Mailboxes/{mailbox.Id}/0", $"../MailPlugin.Mailboxes/{mailbox.Id}/{messageId}");
                 await req.Write("message=" + messageId);
                 mailbox.UnlockSave();
             } break;
@@ -236,7 +236,7 @@ public partial class MailPlugin : Plugin
                 e.Add(new LargeContainerElement("Send an email", $"From: {mailbox.Address}{(mailbox.Name == null ? "" : $" ({mailbox.Name})")}", id: "e1"));
                 e.Add(new ContainerElement("Add attachment:", new FileSelector("update-file")) { Button = new ButtonJS("Add", "Upload()", "green", id: "uploadButton") });
                 page.AddError();
-                int attachmentCount = Directory.Exists($"../Mail/{mailbox.Id}/0") ? Directory.GetFiles($"../Mail/{mailbox.Id}/0").Select(x => x.After('/').After('\\')).Count(x => x != "text") : 0;
+                int attachmentCount = Directory.Exists($"../MailPlugin.Mailboxes/{mailbox.Id}/0") ? Directory.GetFiles($"../MailPlugin.Mailboxes/{mailbox.Id}/0").Select(x => x.After('/').After('\\')).Count(x => x != "text") : 0;
                 if (mailbox.Messages.TryGetValue(0, out var message))
                 {
                     int counter = 0;
@@ -264,10 +264,10 @@ public partial class MailPlugin : Plugin
                     message = new(new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address), [], "", null);
                     mailbox.Messages[0] = message;
                 }
-                Directory.CreateDirectory($"../Mail/{mailbox.Id}/0");
+                Directory.CreateDirectory($"../MailPlugin.Mailboxes/{mailbox.Id}/0");
                 var file = req.Files[0];
                 int attachmentId = message.Attachments.Count;
-                if (file.Download($"../Mail/{mailbox.Id}/0/{attachmentId}", 10485760))
+                if (file.Download($"../MailPlugin.Mailboxes/{mailbox.Id}/0/{attachmentId}", 10485760))
                     message.Attachments.Add(new(file.FileName?.Trim()?.HtmlSafe(), file.ContentType?.Trim()?.HtmlSafe()));
                 else req.Status = 413;
                 mailbox.UnlockSave();
@@ -283,11 +283,11 @@ public partial class MailPlugin : Plugin
                     throw new NotFoundSignal();
                 mailbox.Lock();
                 message.Attachments.RemoveAt(a);
-                File.Delete($"../Mail/{mailbox.Id}/0/{a}");
+                File.Delete($"../MailPlugin.Mailboxes/{mailbox.Id}/0/{a}");
                 a++;
-                while (File.Exists($"../Mail/{mailbox.Id}/0/{a}"))
+                while (File.Exists($"../MailPlugin.Mailboxes/{mailbox.Id}/0/{a}"))
                 {
-                    File.Move($"../Mail/{mailbox.Id}/0/{a}", $"../Mail/{mailbox.Id}/0/{a - 1}");
+                    File.Move($"../MailPlugin.Mailboxes/{mailbox.Id}/0/{a}", $"../MailPlugin.Mailboxes/{mailbox.Id}/0/{a - 1}");
                     a++;
                 }
                 mailbox.UnlockSave();
@@ -388,7 +388,7 @@ public partial class MailPlugin : Plugin
                 e.Add(new LargeContainerElement("Preview draft", headingContents) { Button = new ButtonJS("Send", "Send()", "green", id: "send") });
                 Presets.AddError(page);
 
-                string messagePath = $"../Mail/{mailbox.Id}/0/";
+                string messagePath = $"../MailPlugin.Mailboxes/{mailbox.Id}/0/";
                 string? c = null;
                 if (File.Exists(messagePath + "text"))
                     c = AddHTML(File.ReadAllText(messagePath + "text").Trim());
@@ -407,7 +407,7 @@ public partial class MailPlugin : Plugin
                         [
                             new Paragraph("File: " + attachment.Name ?? "Unknown name"),
                             new Paragraph("Type: " + attachment.MimeType ?? "Unknown type"),
-                            new Paragraph("Size: " + FileSizeString(new FileInfo($"../Mail/{mailbox.Id}/0/{attachmentId}").Length))
+                            new Paragraph("Size: " + FileSizeString(new FileInfo($"../MailPlugin.Mailboxes/{mailbox.Id}/0/{attachmentId}").Length))
                         ])
                         { Buttons =
                             [

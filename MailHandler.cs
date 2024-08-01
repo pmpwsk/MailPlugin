@@ -33,15 +33,15 @@ public partial class MailPlugin : Plugin
         mailbox.Messages[messageId] = new(true, DateTime.UtcNow, mailGen, potentialMessageId);
         mailbox.Folders["Inbox"].Add(messageId);
         mailbox.UnlockSave();
-        Directory.CreateDirectory($"../Mail/{mailbox.Id}/{messageId}");
+        Directory.CreateDirectory($"../MailPlugin.Mailboxes/{mailbox.Id}/{messageId}");
         if (mailGen.TextBody != null)
-            File.WriteAllText($"../Mail/{mailbox.Id}/{messageId}/text", mailGen.TextBody);
+            File.WriteAllText($"../MailPlugin.Mailboxes/{mailbox.Id}/{messageId}/text", mailGen.TextBody);
         if (mailGen.HtmlBody != null)
-            File.WriteAllText($"../Mail/{mailbox.Id}/{messageId}/html", mailGen.HtmlBody);
+            File.WriteAllText($"../MailPlugin.Mailboxes/{mailbox.Id}/{messageId}/html", mailGen.HtmlBody);
         int attachmentIndex = 0;
         foreach (var attachment in mailGen.Attachments)
         {
-            File.WriteAllBytes($"../Mail/{mailbox.Id}/{messageId}/{attachmentIndex}", attachment.Bytes);
+            File.WriteAllBytes($"../MailPlugin.Mailboxes/{mailbox.Id}/{messageId}/{attachmentIndex}", attachment.Bytes);
             attachmentIndex++;
         }
         if (IncomingListeners.TryGetValue(mailbox, out var listenerKV))
@@ -100,15 +100,15 @@ public partial class MailPlugin : Plugin
                 mailbox.Messages[messageId] = mail;
                 mailbox.Folders[mailbox.AuthRequirements.SatisfiedBy(authResult) ? "Inbox" : "Spam"].Add(messageId);
                 mailbox.UnlockSave();
-                Directory.CreateDirectory($"../Mail/{mailbox.Id}/{messageId}");
+                Directory.CreateDirectory($"../MailPlugin.Mailboxes/{mailbox.Id}/{messageId}");
                 if (message.TextBody != null)
-                    File.WriteAllText($"../Mail/{mailbox.Id}/{messageId}/text", message.TextBody);
+                    File.WriteAllText($"../MailPlugin.Mailboxes/{mailbox.Id}/{messageId}/text", message.TextBody);
                 if (message.HtmlBody != null)
-                    File.WriteAllText($"../Mail/{mailbox.Id}/{messageId}/html", message.HtmlBody);
+                    File.WriteAllText($"../MailPlugin.Mailboxes/{mailbox.Id}/{messageId}/html", message.HtmlBody);
                 int attachmentIndex = 0;
                 foreach (var attachment in message.Attachments)
                 {
-                    using var stream = File.OpenWrite($"../Mail/{mailbox.Id}/{messageId}/{attachmentIndex}");
+                    using var stream = File.OpenWrite($"../MailPlugin.Mailboxes/{mailbox.Id}/{messageId}/{attachmentIndex}");
                     if (attachment is MessagePart messagePart)
                         messagePart.Message.WriteTo(stream);
                     else if (attachment is MimePart mimePart)

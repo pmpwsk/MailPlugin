@@ -124,12 +124,12 @@ public partial class MailPlugin : Plugin
 
         protected override IEnumerable<string> EnumerateDirectoriesToClear()
         {
-            yield return "../Mail";
+            yield return "../MailPlugin.Mailboxes";
         }
 
         protected override IEnumerable<string> EnumerateOtherDirectories(TableEntry<Mailbox> entry)
         {
-            yield return $"../Mail/{entry.Key}";
+            yield return $"../MailPlugin.Mailboxes/{entry.Key}";
         }
     }
 }

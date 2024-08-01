@@ -292,7 +292,7 @@ public partial class MailPlugin : Plugin
                 mailbox.Lock();
                 foreach (var m in folder)
                 {
-                    string messagePath = $"../Mail/{mailbox.Id}/{m}";
+                    string messagePath = $"../MailPlugin.Mailboxes/{mailbox.Id}/{m}";
                     if (Directory.Exists(messagePath))
                         Directory.Delete(messagePath, true);
                     mailbox.Messages.Remove(m);

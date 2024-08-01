@@ -6,7 +6,7 @@ public partial class MailPlugin : Plugin
 {
     public MailPlugin(bool assignEvents = true)
     {
-        Directory.CreateDirectory("../Mail");
+        Directory.CreateDirectory("../MailPlugin.Mailboxes");
 
         if (assignEvents)
         {

@@ -21,7 +21,7 @@ public partial class MailPlugin : Plugin
                 mailbox.Lock();
                 foreach (ulong messageId in due)
                 {
-                    string messagePath = $"../Mail/{mailbox.Id}/{messageId}";
+                    string messagePath = $"../MailPlugin.Mailboxes/{mailbox.Id}/{messageId}";
                     if (Directory.Exists(messagePath))
                         Directory.Delete(messagePath, true);
                     mailbox.Messages.Remove(messageId);

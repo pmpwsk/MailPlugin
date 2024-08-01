@@ -82,7 +82,7 @@ public partial class MailPlugin : Plugin
                     Mailbox mailbox = new(id, address);
                     Mailboxes[id] = mailbox;
                     MailboxTable.AddToAccelerators(mailbox, Mailboxes.UserAllowedMailboxes, Mailboxes.MailboxByAddress);
-                    Directory.CreateDirectory($"../Mail/{mailbox.Id}");
+                    Directory.CreateDirectory($"../MailPlugin.Mailboxes/{mailbox.Id}");
                     await req.Write("mailbox=" + id);
                 }
             } break;
@@ -96,8 +96,8 @@ public partial class MailPlugin : Plugin
                 {
                     Mailboxes.Delete(mailboxId);
                     MailboxTable.RemoveFromAccelerators(mailbox, Mailboxes.UserAllowedMailboxes, Mailboxes.MailboxByAddress);
-                    if (Directory.Exists($"../Mail/{mailbox.Id}"))
-                        Directory.Delete($"../Mail/{mailbox.Id}", true);
+                    if (Directory.Exists($"../MailPlugin.Mailboxes/{mailbox.Id}"))
+                        Directory.Delete($"../MailPlugin.Mailboxes/{mailbox.Id}", true);
                 }
             } break;
 

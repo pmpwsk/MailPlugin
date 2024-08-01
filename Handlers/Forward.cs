@@ -43,7 +43,7 @@ public partial class MailPlugin : Plugin
                     throw new BadRequestSignal();
                 mailbox.Lock();
                 string? text = null;
-                string messagePath = $"../Mail/{mailbox.Id}/{messageId}/";
+                string messagePath = $"../MailPlugin.Mailboxes/{mailbox.Id}/{messageId}/";
                 if (File.Exists(messagePath + "html"))
                     text = File.ReadAllText(messagePath + "html");
                 if (text == null && File.Exists(messagePath + "text"))
@@ -59,8 +59,8 @@ public partial class MailPlugin : Plugin
                 while (subject.SplitAtFirst(':', out var subjectPrefix, out var realSubject) && subjectPrefix.All(char.IsLetter) && (subjectPrefix.Length == 2 || subjectPrefix.Length == 3) && realSubject.TrimStart() != "")
                     subject = realSubject.TrimStart();
                 mailbox.Messages[0] = new(new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address), [], "Fwd: " + subject, null);
-                Directory.CreateDirectory($"../Mail/{mailbox.Id}/0");
-                File.WriteAllText($"../Mail/{mailbox.Id}/0/text", text ?? "");
+                Directory.CreateDirectory($"../MailPlugin.Mailboxes/{mailbox.Id}/0");
+                File.WriteAllText($"../MailPlugin.Mailboxes/{mailbox.Id}/0/text", text ?? "");
                 mailbox.UnlockSave();
             } break;
 
@@ -83,8 +83,8 @@ public partial class MailPlugin : Plugin
                 MailMessage message = new(new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address), to.Select(x => new MailAddress(x, mailbox.Contacts.TryGetValue(x, out var contact) ? contact.Name : x)).ToList(), "Fwd: " + subject, null);
                 foreach (var attachment in originalMessage.Attachments)
                     message.Attachments.Add(attachment);
-                string? htmlPart = File.Exists($"../Mail/{mailbox.Id}/{originalMessageId}/html") ? File.ReadAllText($"../Mail/{mailbox.Id}/{originalMessageId}/html") : null;
-                string? textPart = File.Exists($"../Mail/{mailbox.Id}/{originalMessageId}/text") ? File.ReadAllText($"../Mail/{mailbox.Id}/{originalMessageId}/text") : null;
+                string? htmlPart = File.Exists($"../MailPlugin.Mailboxes/{mailbox.Id}/{originalMessageId}/html") ? File.ReadAllText($"../MailPlugin.Mailboxes/{mailbox.Id}/{originalMessageId}/html") : null;
+                string? textPart = File.Exists($"../MailPlugin.Mailboxes/{mailbox.Id}/{originalMessageId}/text") ? File.ReadAllText($"../MailPlugin.Mailboxes/{mailbox.Id}/{originalMessageId}/text") : null;
                 if (info)
                 {
                     string prefix = $"# Forwarded message:\n# From: {originalMessage.From.FullString}\n# Time: {DateTimeString(originalMessage.TimestampUtc)} UTC\n\n\n";
@@ -97,7 +97,7 @@ public partial class MailPlugin : Plugin
                 int counter = 0;
                 foreach (var attachment in originalMessage.Attachments)
                 {
-                    msg.Attachments.Add(new($"../Mail/{mailbox.Id}/{originalMessageId}/{counter}", string.IsNullOrEmpty(attachment.Name) ? "Unknown name" : attachment.Name, attachment.MimeType));
+                    msg.Attachments.Add(new($"../MailPlugin.Mailboxes/{mailbox.Id}/{originalMessageId}/{counter}", string.IsNullOrEmpty(attachment.Name) ? "Unknown name" : attachment.Name, attachment.MimeType));
                     counter++;
                 }
                 var result = MailManager.Out.Send(msg, out var messageIds);
@@ -126,13 +126,13 @@ public partial class MailPlugin : Plugin
                     messageId++;
                 mailbox.Messages[messageId] = message;
                 mailbox.Folders["Sent"].Add(messageId);
-                Directory.CreateDirectory($"../Mail/{mailbox.Id}/{messageId}");
+                Directory.CreateDirectory($"../MailPlugin.Mailboxes/{mailbox.Id}/{messageId}");
                 for (int i = 0; i < originalMessage.Attachments.Count; i++)
-                    File.Copy($"../Mail/{mailbox.Id}/{originalMessageId}/{i}", $"../Mail/{mailbox.Id}/{messageId}/{i}");
+                    File.Copy($"../MailPlugin.Mailboxes/{mailbox.Id}/{originalMessageId}/{i}", $"../MailPlugin.Mailboxes/{mailbox.Id}/{messageId}/{i}");
                 if (htmlPart != null)
-                    File.WriteAllText($"../Mail/{mailbox.Id}/{messageId}/html", htmlPart);
+                    File.WriteAllText($"../MailPlugin.Mailboxes/{mailbox.Id}/{messageId}/html", htmlPart);
                 if (textPart != null)
-                    File.WriteAllText($"../Mail/{mailbox.Id}/{messageId}/text", textPart);
+                    File.WriteAllText($"../MailPlugin.Mailboxes/{mailbox.Id}/{messageId}/text", textPart);
                 await req.Write("message=" + messageId);
                 mailbox.UnlockSave();
             } break;
