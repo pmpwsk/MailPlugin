@@ -23,3 +23,22 @@ async function Send() {
     }
     send.innerText = "Send";
 }
+
+async function FindOriginal(encodedMessageId) {
+    var b = document.getElementById("find");
+    b.textContent = "finding...";
+    var response = await fetch(`../find?mailbox=${GetQuery("mailbox")}&id=${encodedMessageId}`, {method: "POST"});
+    b.textContent = "find";
+    if (response.status === 200) {
+        var text = await response.text();
+        if (text.startsWith("mailbox=")) {
+            window.location.assign(`../?${text}`);
+            return;
+        }
+        else if (text === "no") {
+            ShowError("The original message was deleted or the sender did something wrong.");
+            return;
+        }
+    }
+    ShowError("Connection failed.");
+}
