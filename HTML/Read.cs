@@ -53,7 +53,7 @@ public partial class MailPlugin : Plugin
                     break;
                 case "br":
                 case "hr":
-                    LastRealParagraph = new Paragraph("");
+                    LastRealParagraph = new Paragraph("") {Unsafe = true};
                     Result.Add(LastRealParagraph);
                     break;
                 case "#text":
@@ -66,7 +66,7 @@ public partial class MailPlugin : Plugin
                         }
                         else if (inner.Trim() != "")
                         {
-                            LastRealParagraph = new(inner);
+                            LastRealParagraph = new(inner) {Unsafe = true};
                             Result.Add(LastRealParagraph);
                         }
                     }
@@ -87,7 +87,7 @@ public partial class MailPlugin : Plugin
                         if (code != null)
                             if (LastRealParagraph == null)
                             {
-                                LastRealParagraph = new(code);
+                                LastRealParagraph = new(code) {Unsafe = true};
                                 Result.Add(LastRealParagraph);
                             }
                             else LastRealParagraph.Text += code;
@@ -99,7 +99,7 @@ public partial class MailPlugin : Plugin
                         if (items.Count != 0)
                         {
                             LastRealParagraph = null;
-                            Result.Add(new BulletList(items));
+                            Result.Add(new BulletList(items) {Unsafe = true});
                         }
                     }
                     break;
@@ -116,7 +116,7 @@ public partial class MailPlugin : Plugin
                                 "I" => OrderedList.Types.RomanNumbersUppercase,
                                 "i" => OrderedList.Types.RomanNumbersLowercase,
                                 _ => OrderedList.Types.Numbers
-                            }));
+                            }) {Unsafe = true});
                         }
                     }
                     break;
@@ -129,7 +129,7 @@ public partial class MailPlugin : Plugin
                         {
                             LastRealParagraph = null;
                             if (IncludeImageLinks)
-                                Result.Add(new Paragraph($"<a href=\"{src}\" target=\"_blank\">[external image on {domain.HtmlSafe()} (dangerous!)]</a>"));
+                                Result.Add(new Paragraph($"<a href=\"{src}\" target=\"_blank\">[external image on {domain.HtmlSafe()} (dangerous!)]</a>") {Unsafe = true});
                         }
                         else if (src.StartsWith("data:image/"))
                         {

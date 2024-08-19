@@ -135,7 +135,7 @@ public partial class MailPlugin : Plugin
                         string offsetQuery = offset == 0 ? "" : $"&offset={offset}";
                         foreach (var mId in GetLastReversed(folder, MessagePreloadCount, offset))
                             if (mailbox.Messages.TryGetValue(mId, out var m))
-                                e.Add(new ButtonElement(m.Subject, (folderName == "Sent" ? "To: " + string.Join(", ", m.To.Select(x => x.ContactString(mailbox))) : m.From.ContactString(mailbox)) + "<br/>" + DateTimeString(AdjustDateTime(req, m.TimestampUtc)), $".?mailbox={mailboxId}&folder={HttpUtility.UrlEncode(folderName)}&message={mId}{offsetQuery}", m.Unread ? "red" : null));
+                                e.Add(new ButtonElement(m.Subject, (folderName == "Sent" ? "To: " + string.Join(", ", m.To.Select(x => x.ContactString(mailbox))) : m.From.ContactString(mailbox)).HtmlSafe() + "</p><p>" + DateTimeString(AdjustDateTime(req, m.TimestampUtc)), $".?mailbox={mailboxId}&folder={HttpUtility.UrlEncode(folderName)}&message={mId}{offsetQuery}", m.Unread ? "red" : null) {Unsafe = true});
                         if (offset + MessagePreloadCount < folder.Count)
                             e.Add(new ButtonElement(null, "Older messages", $"{PathWithoutQueries(".", req, "offset")}&offset={offset + MessagePreloadCount}"));
                     }
@@ -213,7 +213,7 @@ public partial class MailPlugin : Plugin
                         {
                             if (m.Unread)
                                 anyUnread = true;
-                            page.Sidebar.Add(new ButtonElement(null, $"{(folderName == "Sent" ? "To: " + string.Join(", ", m.To.Select(x => x.ContactString(mailbox))) : m.From.ContactString(mailbox))}:<br/>{m.Subject}", $".?mailbox={mailboxId}&folder={HttpUtility.UrlEncode(folderName)}&message={mId}{offsetQuery}", m.Unread ? "red" : null));
+                            page.Sidebar.Add(new ButtonElement(null, $"{(folderName == "Sent" ? "To: " + string.Join(", ", m.To.Select(x => x.ContactString(mailbox))) : m.From.ContactString(mailbox))}:".HtmlSafe() + "<br/>" + m.Subject, $".?mailbox={mailboxId}&folder={HttpUtility.UrlEncode(folderName)}&message={mId}{offsetQuery}", m.Unread ? "red" : null) {Unsafe = true});
                         }
                     if (anyUnread)
                         page.Favicon = $"{req.PluginPathPrefix}/icon-red.ico";
@@ -222,7 +222,7 @@ public partial class MailPlugin : Plugin
                     HighlightSidebar(".", page, req, "view");
                     List<IContent> headingContents = [];
                     if (message.InReplyToId != null)
-                        headingContents.Add(new Paragraph($"This is a reply to another email (<a href=\"javascript:\" id=\"find\" onclick=\"FindOriginal('{HttpUtility.UrlEncode(message.InReplyToId)}')\">find</a>)."));
+                        headingContents.Add(new Paragraph($"This is a reply to another email (<a href=\"javascript:\" id=\"find\" onclick=\"FindOriginal('{HttpUtility.UrlEncode(message.InReplyToId).HtmlValueSafe()}')\">find</a>).") {Unsafe = true});
                     headingContents.Add(new Paragraph(DateTimeString(AdjustDateTime(req, message.TimestampUtc))));
                     headingContents.Add(new Paragraph("From: " + message.From.ContactString(mailbox)));
                     foreach (var to in message.To)
@@ -286,7 +286,7 @@ public partial class MailPlugin : Plugin
                         views.Add($"<a href=\"{PathWithoutQueries(".", req, "view", "offset")}&view=load-html\" target=\"_blank\">Load HTML (dangerous!)</a>");
                     }
                     if (views.Count != 0)
-                        e.Add(new ContainerElement("View", new BulletList(views)));
+                        e.Add(new ContainerElement("View", new BulletList(views) {Unsafe = true}));
                 }
             } break;
 
