@@ -1,52 +1,16 @@
-let ch = 0;
 let send = document.getElementById("send");
 let ta = document.getElementById("text");
 let subject = document.getElementById("subject");
 let to = document.getElementById("to");
 let error = document.getElementById("error");
-let e1 = document.getElementById("e1");
-let e2 = document.getElementById("e2");
-let e3 = document.getElementById("e3");
-let e4 = document.getElementById("e4");
-let sidebar = document.querySelector(".sidebar");
-let full = document.querySelector(".full");
 let save = document.getElementById("save");
 let discard = document.getElementById("discard");
-window.onresize = Resize;
-ta.onclick = Refocus;
-Resize();
 document.addEventListener("keydown", e => {
     if (e.ctrlKey && e.key === "s") {
         e.preventDefault();
         Save();
     }
 });
-
-function Resize() {
-    var fullComp = window.getComputedStyle(full);
-    var erComp = window.getComputedStyle(error);
-    var e1Comp = window.getComputedStyle(e1);
-    var e2Comp = window.getComputedStyle(e2);
-    var e3Comp = window.getComputedStyle(e3);
-    var e4Comp = window.getComputedStyle(e4);
-    var newHeightFloat = window.visualViewport.height - (parseFloat(e2Comp["marginTop"]) * 3) - parseFloat(e1Comp["height"]) - parseFloat(e2Comp["height"]) - parseFloat(e4Comp["height"]) - parseFloat(e3Comp["marginTop"]) - parseFloat(fullComp["paddingTop"]) - parseFloat(fullComp["paddingBottom"]);
-    if (erComp["display"] !== "none")
-        newHeightFloat = newHeightFloat - parseFloat(e2Comp["marginTop"]) - parseFloat(erComp["height"]);
-    if (newHeightFloat < 300)
-        newHeightFloat = 300;
-    e3.style.flex = "1";
-    e3.style.height = newHeightFloat + "px";
-    Refocus();
-}
-
-function Refocus() {
-    var nh = ta.clientHeight;
-    if (ch > nh && document.activeElement === ta) {
-        ta.blur();
-        ta.focus();
-    }
-    ch = nh;
-}
 
 async function GoToAttachments() {
     if (await Save())

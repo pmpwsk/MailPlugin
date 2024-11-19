@@ -51,11 +51,6 @@ public partial class MailPlugin : Plugin
                     page.Sidebar.Add(new ButtonElement(null, m.Address, $"send?mailbox={m.Id}"));
                 }
                 HighlightSidebar("send", page, req);
-                page.Styles.Add(new CustomStyle(
-                    "#e3 { display: flex; flex-flow: column; }",
-                    "#e3 textarea { flex: 1 1 auto; }",
-                    "#e3 h1, #e3 h2, #e3 div.buttons { flex: 0 1 auto; }"
-                ));
                 List<IContent> headingContent =
                 [
                     new Paragraph($"From: {mailbox.Address}{(mailbox.Name == null ? "" : $" ({mailbox.Name})")}")
@@ -65,9 +60,9 @@ public partial class MailPlugin : Plugin
                     headingContent.Add(new Paragraph($"To: {to}"));
                     headingContent.Add(new Paragraph($"Subject: {subject}"));
                 } 
-                e.Add(new LargeContainerElement((message == null || message.InReplyToId == null) ? "Send an email" : "Reply", headingContent, id: "e1") { Button = new ButtonJS("Send", "Send()", "green", id: "send") });
+                e.Add(new LargeContainerElement((message == null || message.InReplyToId == null) ? "Send an email" : "Reply", headingContent) { Button = new ButtonJS("Send", "Send()", "green", id: "send") });
                 e.Add(Presets.ErrorElement);
-                e.Add(new ContainerElement(null, "Draft:", id: "e2") { Buttons =
+                e.Add(new ContainerElement(null, "Draft:") { Buttons =
                 [
                     new ButtonJS("Preview", "GoToPreview()"),
                     new ButtonJS("Saved!", "Save()", id: "save"),
@@ -79,10 +74,10 @@ public partial class MailPlugin : Plugin
                     inputs.Add(new TextBox("Recipient(s)...", to, "to", TextBoxRole.Email, onInput: "MessageChanged()"));
                     inputs.Add(new TextBox("Subject...", subject, "subject", onInput: "MessageChanged()"));
                 }
-                inputs.Add(new TextArea("Message...", text, "text", autofocus: true, onInput: "MessageChanged(); Resize()"));
-                e.Add(new LargeContainerElement(null, inputs, id: "e3"));
+                inputs.Add(new TextArea("Message...", text, "text", classes: "grow", styles: "min-height: 10rem", autofocus: true, onInput: "MessageChanged()"));
+                e.Add(new LargeContainerElement(null, inputs));
                 int attachmentCount = message == null ? 0 : message.Attachments.Count;
-                e.Add(new ContainerElement(null, "More:", id: "e4") { Buttons = [new ButtonJS($"Attachments ({attachmentCount})", "GoToAttachments()"), ..message == null || message.InReplyToId == null ? (IEnumerable<IButton>)[new ButtonJS("Contacts", "GoToContacts()")] : []] });
+                e.Add(new ContainerElement(null, "More:") { Buttons = [new ButtonJS($"Attachments ({attachmentCount})", "GoToAttachments()"), ..message == null || message.InReplyToId == null ? (IEnumerable<IButton>)[new ButtonJS("Contacts", "GoToContacts()")] : []] });
             } break;
 
             case "/send/save-draft":
