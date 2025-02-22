@@ -17,7 +17,7 @@ public partial class MailPlugin : Plugin
             { CreatePage(req, "Mail settings", out var page, out var e);
                 if (InvalidMailbox(req, out var mailbox))
                     break;
-                page.Navigation.Add(new Button("Back", $"..?mailbox={mailbox.Id}", "right"));
+                page.Navigation.Add(new Button("Back", $".?mailbox={mailbox.Id}", "right"));
                 page.Scripts.Add(Presets.SendRequestScript);
                 page.Scripts.Add(new Script("query.js"));
                 page.Scripts.Add(new Script("settings.js"));

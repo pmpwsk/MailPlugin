@@ -90,7 +90,7 @@ async function Send() {
                 break;
             default:
                 if (typeof response === "string" && response.startsWith("message=")) {
-                    window.location.assign(`..?mailbox=${GetQuery("mailbox")}&folder=Sent&${response}`);
+                    window.location.assign(`.?mailbox=${GetQuery("mailbox")}&folder=Sent&${response}`);
                     return;
                 }
                 ShowError("Connection failed.");
