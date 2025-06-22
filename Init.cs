@@ -10,9 +10,9 @@ public partial class MailPlugin : Plugin
 
         if (assignEvents)
         {
-            MailManager.In.MailboxExists += MailboxExists;
-            MailManager.In.HandleMail += HandleMail;
-            MailManager.Out.BeforeSend += BeforeSend;
+            MailManager.In.MailboxExists.Register(MailboxExists);
+            MailManager.In.HandleMail.Register(HandleMail);
+            MailManager.Out.BeforeSend.Register(BeforeSend);
         }
     }
 }

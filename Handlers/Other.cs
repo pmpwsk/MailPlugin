@@ -394,7 +394,7 @@ public partial class MailPlugin : Plugin
             // INCOMING MESSAGE EVENT
             case "/incoming-event":
             { GET(req);
-                req.KeepEventAliveCancelled += RemoveIncomingListener;
+                req.KeepEventAliveCancelled.Register(RemoveIncomingListener);
                 var mailboxes = Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : [];
                 ulong actualLast, lastUnread;
                 ulong lastKnown = req.Query.TryGetValue("last", out ulong lk) ? lk : 0;

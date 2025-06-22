@@ -50,7 +50,7 @@ public partial class MailPlugin : Plugin
 			"/settings.js" => "1722114986859",
 			"/send/attachments.js" => "1722034824924",
 			"/send/contacts.js" => "1722034832111",
-			"/send/preview.js" => "1740184828945",
+			"/send/preview.js" => "1750599620887",
 			"/settings/auth.js" => "1722115373405",
 			"/settings/contacts-edit.js" => "1722116471858",
 			"/settings/contacts.js" => "1722116194459",
