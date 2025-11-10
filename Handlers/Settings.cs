@@ -6,7 +6,7 @@ using static uwap.WebFramework.Mail.MailAuth;
 
 namespace uwap.WebFramework.Plugins;
 
-public partial class MailPlugin : Plugin
+public partial class MailPlugin
 {
     public Task HandleSettings(Request req)
     {
@@ -22,8 +22,7 @@ public partial class MailPlugin : Plugin
                 page.Scripts.Add(new Script("query.js"));
                 page.Scripts.Add(new Script("settings.js"));
                 page.Sidebar.Add(new ButtonElement("Mailboxes:", null, "."));
-                foreach (var m in (Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : [])
-                    .OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@')))
+                foreach (var m in EnumerateAccessibleMailboxes(req))
                     page.Sidebar.Add(new ButtonElement(null, m.Address, $"settings?mailbox={m.Id}"));
                 HighlightSidebar("settings", page, req);
                 e.Add(new LargeContainerElement("Mail settings", mailbox.Address));
@@ -38,39 +37,33 @@ public partial class MailPlugin : Plugin
 
             case "/settings/set-name":
             { POST(req);
-                if (InvalidMailbox(req, out var mailbox))
+                if (InvalidMailbox(req, out var readMailbox))
                     break;
                 if (!req.Query.TryGetValue("name", out var name))
                     throw new BadRequestSignal();
                 if (name == "")
                     name = null;
-                mailbox.Lock();
-                mailbox.Name = name;
-                mailbox.UnlockSave();
+                Mailboxes.Transaction(readMailbox.Id, (ref Mailbox mailbox) => mailbox.Name = name);
             } break;
 
             case "/settings/set-footer":
             { POST(req);
-                if (InvalidMailbox(req, out var mailbox))
+                if (InvalidMailbox(req, out var readMailbox))
                     break;
                 if (!req.Query.TryGetValue("footer", out var footer))
                     throw new BadRequestSignal();
                 if (footer == "")
                     footer = null;
-                mailbox.Lock();
-                mailbox.Footer = footer;
-                mailbox.UnlockSave();
+                Mailboxes.Transaction(readMailbox.Id, (ref Mailbox mailbox) => mailbox.Footer = footer);
             } break;
 
             case "/settings/set-external-images":
             { POST(req);
-                if (InvalidMailbox(req, out var mailbox))
+                if (InvalidMailbox(req, out var readMailbox))
                     break;
                 if (!req.Query.TryGetValue("value", out bool value))
                     throw new NotFoundSignal();
-                mailbox.Lock();
-                mailbox.ShowExternalImageLinks = value;
-                mailbox.UnlockSave();
+                Mailboxes.Transaction(readMailbox.Id, (ref Mailbox mailbox) => mailbox.ShowExternalImageLinks = value);
             } break;
 
 
@@ -87,8 +80,7 @@ public partial class MailPlugin : Plugin
                 page.Scripts.Add(new Script("../query.js"));
                 page.Scripts.Add(new Script("auth.js"));
                 page.Sidebar.Add(new ButtonElement("Mailboxes:", null, ".."));
-                foreach (var m in (Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : [])
-                    .OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@')))
+                foreach (var m in EnumerateAccessibleMailboxes(req))
                     page.Sidebar.Add(new ButtonElement(null, m.Address, $"auth?mailbox={m.Id}"));
                 HighlightSidebar("auth", page, req);
                 e.Add(new LargeContainerElement("Mail authentication",
@@ -110,19 +102,19 @@ public partial class MailPlugin : Plugin
                 e.Add(new ContainerElement("SPF",
                 [
                     new Selector("spf-min", ar.SPF.ToString(),
-                        MailAuthVerdictSPF.HardFail.ToString(),
-                        MailAuthVerdictSPF.SoftFail.ToString(),
-                        MailAuthVerdictSPF.Unset.ToString(),
-                        MailAuthVerdictSPF.Pass.ToString())
+                        nameof(MailAuthVerdictSPF.HardFail),
+                        nameof(MailAuthVerdictSPF.SoftFail),
+                        nameof(MailAuthVerdictSPF.Unset),
+                        nameof(MailAuthVerdictSPF.Pass))
                     { OnChange = "Changed()" }
                 ]));
                 e.Add(new ContainerElement("DKIM",
                 [
                     new Selector("dkim-min", ar.DKIM.ToString(),
-                        MailAuthVerdictDKIM.Fail.ToString(),
-                        MailAuthVerdictDKIM.Mixed.ToString(),
-                        MailAuthVerdictDKIM.Unset.ToString(),
-                        MailAuthVerdictDKIM.Pass.ToString())
+                        nameof(MailAuthVerdictDKIM.Fail),
+                        nameof(MailAuthVerdictDKIM.Mixed),
+                        nameof(MailAuthVerdictDKIM.Unset),
+                        nameof(MailAuthVerdictDKIM.Pass))
                     { OnChange = "Changed()" }
                 ]));
                 e.Add(new ContainerElement("DMARC",
@@ -130,18 +122,18 @@ public partial class MailPlugin : Plugin
                     new Checkbox("Always satisfied by DMARC pass", "dmarc-enough", ar.SatisfiedByDMARC)
                     { OnChange = "Changed()" },
                     new Selector("dmarc-min", ar.DMARC.ToString(),
-                        MailAuthVerdictDMARC.FailWithReject.ToString(),
-                        MailAuthVerdictDMARC.FailWithQuarantine.ToString(),
-                        MailAuthVerdictDMARC.FailWithoutAction.ToString(),
-                        MailAuthVerdictDMARC.Unset.ToString(),
-                        MailAuthVerdictDMARC.Pass.ToString())
+                        nameof(MailAuthVerdictDMARC.FailWithReject),
+                        nameof(MailAuthVerdictDMARC.FailWithQuarantine),
+                        nameof(MailAuthVerdictDMARC.FailWithoutAction),
+                        nameof(MailAuthVerdictDMARC.Unset),
+                        nameof(MailAuthVerdictDMARC.Pass))
                     { OnChange = "Changed()" }
                 ]));
             } break;
 
             case "/settings/auth/set":
             { POST(req);
-                if (InvalidMailbox(req, out var mailbox))
+                if (InvalidMailbox(req, out var readMailbox))
                     break;
                 if (!(req.Query.TryGetValue("connection-secure", out string? connectionSecureS) && req.Query.TryGetValue("connection-ptr", out string? connectionPtrS)
                     && req.Query.TryGetValue("spf-min", out string? spfMinS)
@@ -152,15 +144,16 @@ public partial class MailPlugin : Plugin
                     && Enum.TryParse<MailAuthVerdictDKIM>(dkimMinS, out var dkimMin)
                     && bool.TryParse(dmarcEnoughS, out bool dmarcEnough) && Enum.TryParse<MailAuthVerdictDMARC>(dmarcMinS, out var dmarcMin)))
                     throw new BadRequestSignal();
-                mailbox.Lock();
-                var ar = mailbox.AuthRequirements;
-                ar.Secure = connectionSecure;
-                ar.PTR = connectionPtr;
-                ar.SPF = spfMin;
-                ar.DKIM = dkimMin;
-                ar.SatisfiedByDMARC = dmarcEnough;
-                ar.DMARC = dmarcMin;
-                mailbox.UnlockSave();
+                Mailboxes.Transaction(readMailbox.Id, (ref Mailbox mailbox) =>
+                {
+                    var ar = mailbox.AuthRequirements;
+                    ar.Secure = connectionSecure;
+                    ar.PTR = connectionPtr;
+                    ar.SPF = spfMin;
+                    ar.DKIM = dkimMin;
+                    ar.SatisfiedByDMARC = dmarcEnough;
+                    ar.DMARC = dmarcMin;
+                });
             } break;
 
 
@@ -174,8 +167,7 @@ public partial class MailPlugin : Plugin
                 page.Scripts.Add(Presets.SendRequestScript);
                 page.Scripts.Add(new Script("../query.js"));
                 page.Sidebar.Add(new ButtonElement("Mailboxes:", null, ".."));
-                foreach (var m in (Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : [])
-                    .OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@')))
+                foreach (var m in EnumerateAccessibleMailboxes(req))
                     page.Sidebar.Add(new ButtonElement(null, m.Address, $"contacts?mailbox={m.Id}"));
                 HighlightSidebar("contacts", page, req, "email");
                 if (req.Query.TryGetValue("email", out string? email))
@@ -220,7 +212,7 @@ public partial class MailPlugin : Plugin
 
             case "/settings/contacts/set":
             { POST(req);
-                if (InvalidMailbox(req, out var mailbox))
+                if (InvalidMailbox(req, out var readMailbox))
                     break;
                 if (!(req.Query.TryGetValue("email", out string? email)
                     && req.Query.TryGetValue("name", out string? name)
@@ -229,21 +221,16 @@ public partial class MailPlugin : Plugin
                     throw new BadRequestSignal();
                 if (!AccountManager.CheckMailAddressFormat(email))
                     throw new HttpStatusSignal(418);
-                mailbox.Lock();
-                mailbox.Contacts[email] = new(name, favorite);
-                mailbox.UnlockSave();
+                Mailboxes.Transaction(readMailbox.Id, (ref Mailbox mailbox) => mailbox.Contacts[email] = new(name, favorite));
             } break;
 
             case "/settings/contacts/delete":
             { POST(req);
-                if (InvalidMailbox(req, out var mailbox))
+                if (InvalidMailbox(req, out var readMailbox))
                     break;
                 if (!req.Query.TryGetValue("email", out string? email))
                     throw new BadRequestSignal();
-                mailbox.Lock();
-                if (mailbox.Contacts.Remove(email))
-                    mailbox.UnlockSave();
-                else mailbox.UnlockIgnore();
+                Mailboxes.Transaction(readMailbox.Id, (ref Mailbox mailbox) => mailbox.Contacts.Remove(email));
             } break;
 
 
@@ -259,46 +246,51 @@ public partial class MailPlugin : Plugin
                 page.Scripts.Add(new Script("../query.js"));
                 page.Scripts.Add(new Script("folders.js"));
                 page.Sidebar.Add(new ButtonElement("Mailboxes:", null, ".."));
-                foreach (var m in (Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : [])
-                    .OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@')))
+                foreach (var m in EnumerateAccessibleMailboxes(req))
                     page.Sidebar.Add(new ButtonElement(null, m.Address, $"folders?mailbox={m.Id}"));
                 HighlightSidebar("folders", page, req);
                 e.Add(new LargeContainerElement("Mail folders", new List<IContent> { new Paragraph(mailbox.Address), new Paragraph("Warning: Deleting a folder will delete all of the messages within it!") }));
                 e.Add(new ContainerElement("New folder", new TextBox("Enter a name...", null, "name", onEnter: "Create()", autofocus: true)) { Button = new ButtonJS("Create", "Create()", "green")});
                 page.AddError();
                 foreach (var f in SortFolders(mailbox.Folders.Keys))
-                    if (DefaultFolders.Contains(f))
-                        e.Add(new ContainerElement(null, f));
-                    else e.Add(new ContainerElement(null, f) { Button = new ButtonJS("Delete", $"Delete('{HttpUtility.UrlEncode(f)}', '{f.ToId()}')", "red", id: f.ToId()) });
+                    e.Add(DefaultFolders.Contains(f)
+                        ? new ContainerElement(null, f)
+                        : new ContainerElement(null, f)
+                        {
+                            Button = new ButtonJS("Delete", $"Delete('{HttpUtility.UrlEncode(f)}', '{f.ToId()}')",
+                                "red", id: f.ToId())
+                        });
             } break;
 
             case "/settings/folders/create":
             { POST(req);
-                if (InvalidMailbox(req, out var mailbox))
+                if (InvalidMailbox(req, out var readMailbox))
                     break;
                 if (!req.Query.TryGetValue("name", out var name))
                     throw new BadRequestSignal();
-                if (mailbox.Folders.ContainsKey(name))
+                if (readMailbox.Folders.ContainsKey(name))
                     throw new HttpStatusSignal(409);
-                mailbox.Lock();
-                mailbox.Folders[name] = [];
-                mailbox.UnlockSave();
+                Mailboxes.Transaction(readMailbox.Id, (ref Mailbox mailbox) => mailbox.Folders[name] = []);
             } break;
 
             case "/settings/folders/delete":
             { POST(req);
-                if (InvalidMailboxOrFolder(req, out var mailbox, out var folder, out var folderName))
+                if (InvalidMailboxOrFolder(req, out var readMailbox, out _, out var folderName))
                     break;
-                mailbox.Lock();
-                foreach (var m in folder)
+                Mailboxes.Transaction(readMailbox.Id, (ref Mailbox mailbox, ref List<IFileAction> actions) =>
                 {
-                    string messagePath = $"../MailPlugin.Mailboxes/{mailbox.Id}/{m}";
-                    if (Directory.Exists(messagePath))
-                        Directory.Delete(messagePath, true);
-                    mailbox.Messages.Remove(m);
-                }
-                mailbox.Folders.Remove(folderName);
-                mailbox.UnlockSave();
+                    foreach (var messageId in mailbox.Folders[folderName])
+                    {
+                        mailbox.DeleteFileIfExists($"{messageId}/html", actions);
+                        mailbox.DeleteFileIfExists($"{messageId}/text", actions);
+                        int attachmentId = 0;
+                        while (mailbox.DeleteFileIfExists($"{messageId}/{attachmentId}", actions))
+                            attachmentId++;
+                        
+                        mailbox.Messages.Remove(messageId);
+                    }
+                    mailbox.Folders.Remove(folderName);
+                });
             } break;
             
 

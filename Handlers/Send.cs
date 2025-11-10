@@ -7,7 +7,7 @@ using uwap.WebFramework.Mail;
 
 namespace uwap.WebFramework.Plugins;
 
-public partial class MailPlugin : Plugin
+public partial class MailPlugin
 {
     public async Task HandleSend(Request req)
     {
@@ -26,7 +26,7 @@ public partial class MailPlugin : Plugin
                     subject = message.Subject;
                     if (subject == "")
                         subject = null;
-                    text = File.Exists($"../MailPlugin.Mailboxes/{mailbox.Id}/0/text") ? File.ReadAllText($"../MailPlugin.Mailboxes/{mailbox.Id}/0/text") : null;
+                    text = mailbox.GetFileText("0/text");
                     if (text == "")
                         text = null;
                 }
@@ -39,14 +39,13 @@ public partial class MailPlugin : Plugin
                     else text = null;
                 }
                 page.Navigation.Add(new Button("Back", $".?mailbox={mailbox.Id}", "right"));
-                page.Title = (message == null || message.InReplyToId == null) ? "Send an email" : "Reply";
+                page.Title = message?.InReplyToId == null ? "Send an email" : "Reply";
                 page.HideFooter = true;
                 page.Scripts.Add(Presets.SendRequestScript);
                 page.Scripts.Add(new Script("query.js"));
                 page.Scripts.Add(new Script("send.js"));
                 page.Sidebar.Add(new ButtonElement("Mailboxes:", null, "."));
-                foreach (var m in (Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : [])
-                    .OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@')))
+                foreach (var m in EnumerateAccessibleMailboxes(req))
                 {
                     page.Sidebar.Add(new ButtonElement(null, m.Address, $"send?mailbox={m.Id}"));
                 }
@@ -55,7 +54,7 @@ public partial class MailPlugin : Plugin
                 [
                     new Paragraph($"From: {mailbox.Address}{(mailbox.Name == null ? "" : $" ({mailbox.Name})")}")
                 ];
-                if (message != null && message.InReplyToId != null)
+                if (message is { InReplyToId: not null })
                 {
                     headingContent.Add(new Paragraph($"To: {to}"));
                     headingContent.Add(new Paragraph($"Subject: {subject}"));
@@ -84,130 +83,139 @@ public partial class MailPlugin : Plugin
             { POST(req);
                 if (req.IsForm)
                     throw new BadRequestSignal();
-                if (InvalidMailbox(req, out var mailbox))
+                if (InvalidMailbox(req, out var readMailbox))
                     break;
-                if (mailbox.Messages.TryGetValue(0, out var message))
+                
+                string text = await req.GetBodyText();
+                
+                if (readMailbox.Messages.TryGetValue(0, out var readMessage) && readMessage.InReplyToId != null)
                 {
-                    if (message.InReplyToId != null)
-                    {
-                        mailbox.Lock();
-                        goto WriteText;
-                    }
-                }
-                else message = null;
-
-                if (!(req.Query.TryGetValue("to", out var toString) && req.Query.TryGetValue("subject", out var subject)))
-                    throw new BadRequestSignal();
-                var to = toString.Split(',', ';', ' ').Where(x => x != "");
-                if (to.Any(x => !AccountManager.CheckMailAddressFormat(x)))
-                {
-                    await req.Write("invalid-to");
-                    break;
-                }
-                mailbox.Lock();
-                if (message != null)
-                {
-                    message.To = to.Select(x => new MailAddress(x, mailbox.Contacts.TryGetValue(x, out var contact) ? contact.Name : x)).ToList();
-                    message.Subject = subject.Trim();
+                    Mailboxes.Transaction(readMailbox.Id, (ref Mailbox _, ref List<IFileAction> actions)
+                        => actions.Add(new SetFileAction("0/text", path => File.WriteAllText(path, text))));
                 }
                 else
                 {
-                    mailbox.Messages[0] = new(new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address), to.Select(x => new MailAddress(x, mailbox.Contacts.TryGetValue(x, out var contact) ? contact.Name : x)).ToList(), subject.Trim(), null);
+                    if (!(req.Query.TryGetValue("to", out var toString) && req.Query.TryGetValue("subject", out var subject)))
+                        throw new BadRequestSignal();
+                    var to = toString.Split(',', ';', ' ').Where(x => x != "").ToList();
+                    if (to.Any(x => !AccountManager.CheckMailAddressFormat(x)))
+                    {
+                        await req.Write("invalid-to");
+                        break;
+                    }
+                    Mailboxes.Transaction(readMailbox.Id, (ref Mailbox mailbox, ref List<IFileAction> actions) =>
+                    {
+                        var contacts = mailbox.Contacts;
+                        if (mailbox.Messages.TryGetValue(0, out var message))
+                        {
+                            message.To = to.Select(x => new MailAddress(x, contacts.TryGetValue(x, out var contact) ? contact.Name : x)).ToList();
+                            message.Subject = subject.Trim();
+                        }
+                        else
+                        {
+                            mailbox.Messages[0] = new(new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address), to.Select(x => new MailAddress(x, contacts.TryGetValue(x, out var contact) ? contact.Name : x)).ToList(), subject.Trim(), null);
+                        }
+                    
+                        actions.Add(new SetFileAction("0/text", path => File.WriteAllText(path, text)));
+                    });
                 }
 
-                WriteText:
-                string text = await req.GetBodyText();
-                Directory.CreateDirectory($"../MailPlugin.Mailboxes/{mailbox.Id}/0");
-                File.WriteAllText($"../MailPlugin.Mailboxes/{mailbox.Id}/0/text", text);
-
                 await req.Write("ok");
-                mailbox.UnlockSave();
             } break;
             
             case "/send/delete-draft":
             { POST(req);
-                if (InvalidMailbox(req, out var mailbox))
+                if (InvalidMailbox(req, out var readMailbox))
                     break;
-                if (!mailbox.Messages.ContainsKey(0))
+                if (!readMailbox.Messages.ContainsKey(0))
                     break;
-                mailbox.Lock();
-                mailbox.Messages.Remove(0);
-                if (Directory.Exists($"../MailPlugin.Mailboxes/{mailbox.Id}/0"))
-                    Directory.Delete($"../MailPlugin.Mailboxes/{mailbox.Id}/0", true);
-                mailbox.UnlockSave();
+                Mailboxes.Transaction(readMailbox.Id, (ref Mailbox mailbox, ref List<IFileAction> actions) =>
+                {
+                    mailbox.Messages.Remove(0);
+                    mailbox.DeleteFileIfExists("0/html", actions);
+                    mailbox.DeleteFileIfExists("0/text", actions);
+                    int attachmentId = 0;
+                    while (mailbox.DeleteFileIfExists($"0/{attachmentId}", actions))
+                        attachmentId++;
+                });
             } break;
                 
             case "/send/send-draft":
             { POST(req);
-                if (InvalidMailbox(req, out var mailbox))
+                if (InvalidMailbox(req, out var readMailbox))
                     break;
-                if (!mailbox.Messages.TryGetValue(0, out var message))
+                if (!readMailbox.Messages.TryGetValue(0, out var readMessage))
                 {
                     await req.Write("no-draft");
                     break;
                 }
-                if (message.Subject == "")
+                if (readMessage.Subject == "")
                 {
                     await req.Write("invalid-subject");
                     break;
                 }
-                if (message.To.Count == 0)
+                if (readMessage.To.Count == 0)
                 {
                     await req.Write("invalid-to");
                     break;
                 }
-                string text = File.Exists($"../MailPlugin.Mailboxes/{mailbox.Id}/0/text") ? File.ReadAllText($"../MailPlugin.Mailboxes/{mailbox.Id}/0/text").Trim() : "";
+                string text = readMailbox.GetFileText("0/text")?.Trim() ?? "";
                 if (text == "")
                 {
                     await req.Write("invalid-text");
                     break;
                 }
-                mailbox.Lock();
-                message.TimestampUtc = DateTime.UtcNow;
-                message.From = new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address);
-                string htmlPart = AddHTML(text);
-                string textPart = RemoveHTML(htmlPart);
-                File.WriteAllText($"../MailPlugin.Mailboxes/{mailbox.Id}/0/html", htmlPart);
-                File.WriteAllText($"../MailPlugin.Mailboxes/{mailbox.Id}/0/text", textPart);
-                MailGen msg = new(new(message.From.Name, message.From.Address), message.To.Select(x => new MailboxAddress(x.Name, x.Address)), message.Subject, textPart, htmlPart);
-                if (message.InReplyToId != null)
-                    msg.IsReplyToMessageId = message.InReplyToId;
-                int counter = 0;
-                foreach (var attachment in message.Attachments)
+                
+                var messageId = Mailboxes.TransactionAndGet(readMailbox.Id, (ref Mailbox mailbox, ref List<IFileAction> actions) =>
                 {
-                    msg.Attachments.Add(new($"../MailPlugin.Mailboxes/{mailbox.Id}/0/{counter}", string.IsNullOrEmpty(attachment.Name) ? "Unknown name" : attachment.Name, attachment.MimeType));
-                    counter++;
-                }
-                var result = MailManager.Out.Send(msg, out var messageIds);
-                message.MessageId = string.Join('\n', messageIds);
-                var log = message.Log;
-                if (result.Internal.Count != 0)
-                {
-                    log.Add("Internal:");
-                    foreach (var l in result.Internal)
-                        log.Add(l.Key.Address + ": " + l.Value);
-                }
-                if (result.FromSelf != null)
-                {
-                    log.Add("From the server directly: " + result.FromSelf.ResultType.ToString());
-                    foreach (string l in result.FromSelf.ConnectionLog)
-                        log.Add(l);
-                }
-                if (result.FromBackup != null)
-                {
-                    log.Add("From the backup sender: " + result.FromBackup.ResultType.ToString());
-                    foreach (string l in result.FromBackup.ConnectionLog)
-                        log.Add(l);
-                }
-                mailbox.Messages.Remove(0);
-                ulong messageId = (ulong)message.TimestampUtc.Ticks;
-                while (mailbox.Messages.ContainsKey(messageId))
-                    messageId++;
-                mailbox.Messages[messageId] = message;
-                mailbox.Folders["Sent"].Add(messageId);
-                Directory.Move($"../MailPlugin.Mailboxes/{mailbox.Id}/0", $"../MailPlugin.Mailboxes/{mailbox.Id}/{messageId}");
+                    var message = readMailbox.Messages[0];
+                    ulong messageId = (ulong)message.TimestampUtc.Ticks;
+                    while (mailbox.Messages.ContainsKey(messageId))
+                        messageId++;
+                    
+                    message.TimestampUtc = DateTime.UtcNow;
+                    message.From = new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address);
+                    string htmlPart = AddHTML(text);
+                    string textPart = RemoveHTML(htmlPart);
+                    actions.Add(new SetFileAction($"{messageId}/html", path => File.WriteAllText(path, htmlPart)));
+                    actions.Add(new SetFileAction($"{messageId}/text", path => File.WriteAllText(path, textPart)));
+                    MailGen msg = new(new(message.From.Name, message.From.Address), message.To.Select(x => new MailboxAddress(x.Name, x.Address)), message.Subject, textPart, htmlPart);
+                    if (message.InReplyToId != null)
+                        msg.IsReplyToMessageId = message.InReplyToId;
+                    int counter = 0;
+                    foreach (var attachment in message.Attachments)
+                    {
+                        msg.Attachments.Add(new(string.IsNullOrEmpty(attachment.Name) ? "Unknown name" : attachment.Name, attachment.MimeType, mailbox.GetFileBytes($"0/{counter}") ?? []));
+                        actions.Add(new MoveFileAction($"0/{counter}", $"{messageId}/{counter}"));
+                        counter++;
+                    }
+                    var result = MailManager.Out.Send(msg, out var messageIds);
+                    message.MessageId = string.Join('\n', messageIds);
+                    var log = message.Log;
+                    if (result.Internal.Count != 0)
+                    {
+                        log.Add("Internal:");
+                        foreach (var l in result.Internal)
+                            log.Add(l.Key.Address + ": " + l.Value);
+                    }
+                    if (result.FromSelf != null)
+                    {
+                        log.Add("From the server directly: " + result.FromSelf.ResultType.ToString());
+                        foreach (string l in result.FromSelf.ConnectionLog)
+                            log.Add(l);
+                    }
+                    if (result.FromBackup != null)
+                    {
+                        log.Add("From the backup sender: " + result.FromBackup.ResultType.ToString());
+                        foreach (string l in result.FromBackup.ConnectionLog)
+                            log.Add(l);
+                    }
+                    mailbox.Messages.Remove(0);
+                    mailbox.Messages[messageId] = message;
+                    mailbox.Folders["Sent"].Add(messageId);
+                    return messageId;
+                });
                 await req.Write("message=" + messageId);
-                mailbox.UnlockSave();
             } break;
 
 
@@ -224,14 +232,15 @@ public partial class MailPlugin : Plugin
                 page.Scripts.Add(new Script("../query.js"));
                 page.Scripts.Add(new Script("attachments.js"));
                 page.Sidebar.Add(new ButtonElement("Mailboxes:", null, "."));
-                foreach (var m in (Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : [])
-                    .OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@')))
+                foreach (var m in EnumerateAccessibleMailboxes(req))
                     page.Sidebar.Add(new ButtonElement(null, m.Address, $"attachments?mailbox={m.Id}"));
                 HighlightSidebar("attachments", page, req);
                 e.Add(new LargeContainerElement("Send an email", $"From: {mailbox.Address}{(mailbox.Name == null ? "" : $" ({mailbox.Name})")}", id: "e1"));
                 e.Add(new ContainerElement("Add attachment:", new FileSelector("update-file")) { Button = new ButtonJS("Add", "Upload()", "green", id: "uploadButton") });
                 page.AddError();
-                int attachmentCount = Directory.Exists($"../MailPlugin.Mailboxes/{mailbox.Id}/0") ? Directory.GetFiles($"../MailPlugin.Mailboxes/{mailbox.Id}/0").Select(x => x.After('/').After('\\')).Count(x => x != "text") : 0;
+                int attachmentCount = 0;
+                while (mailbox.ContainsFile($"0/{attachmentCount}"))
+                    attachmentCount++;
                 if (mailbox.Messages.TryGetValue(0, out var message))
                 {
                     int counter = 0;
@@ -245,47 +254,74 @@ public partial class MailPlugin : Plugin
 
             case "/send/attachments/upload":
             { POST(req);
-                if ((!req.IsForm) || req.Files.Count != 1)
+                if (!req.IsForm || req.Files.Count != 1)
                     throw new BadRequestSignal();
-                if (InvalidMailbox(req, out var mailbox))
+                if (InvalidMailbox(req, out var readMailbox))
                     break;
-                mailbox.Lock();
-                if (mailbox.Messages.TryGetValue(0, out var message))
-                {
-                    message.From = new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address);
-                }
-                else
-                {
-                    message = new(new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address), [], "", null);
-                    mailbox.Messages[0] = message;
-                }
-                Directory.CreateDirectory($"../MailPlugin.Mailboxes/{mailbox.Id}/0");
                 var file = req.Files[0];
-                int attachmentId = message.Attachments.Count;
-                if (file.Download($"../MailPlugin.Mailboxes/{mailbox.Id}/0/{attachmentId}", 10485760))
-                    message.Attachments.Add(new(file.FileName?.Trim()?.HtmlSafe(), file.ContentType?.Trim()?.HtmlSafe()));
-                else req.Status = 413;
-                mailbox.UnlockSave();
+                var temp = Path.GetTempFileName();
+                if (!file.Download(temp, 10485760))
+                {
+                    req.Status = 413;
+                    File.Delete(temp);
+                    break;
+                }
+
+                try
+                {
+                    Mailboxes.Transaction(readMailbox.Id, (ref Mailbox mailbox, ref List<IFileAction> actions) =>
+                    {
+                        if (mailbox.Messages.TryGetValue(0, out var message))
+                        {
+                            message.From = new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address);
+                        }
+                        else
+                        {
+                            message = new(new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address), [], "", null);
+                            mailbox.Messages[0] = message;
+                        }
+                        int attachmentId = message.Attachments.Count;
+                        // ReSharper disable ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
+                        message.Attachments.Add(new(file.FileName?.Trim().HtmlSafe(), file.ContentType?.Trim().HtmlSafe()));
+                        // ReSharper restore ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
+                        actions.Add(new SetFileAction($"0/{attachmentId}", path => File.Move(temp, path)));
+                    });
+                }
+                finally
+                {
+                    if (File.Exists(temp))
+                        File.Delete(temp);
+                }
             } break;
 
             case "/send/attachments/delete":
             { POST(req);
-                if (InvalidMailbox(req, out var mailbox))
+                if (InvalidMailbox(req, out var readMailbox))
                     break;
                 if (!(req.Query.TryGetValue("attachment", out var attachmentId) && int.TryParse(attachmentId, out var a) && a >= 0))
                     throw new BadRequestSignal();
-                if (!(mailbox.Messages.TryGetValue(0, out var message) && a < message.Attachments.Count))
+                if (!(readMailbox.Messages.TryGetValue(0, out var readMessage) && a < readMessage.Attachments.Count))
                     throw new NotFoundSignal();
-                mailbox.Lock();
-                message.Attachments.RemoveAt(a);
-                File.Delete($"../MailPlugin.Mailboxes/{mailbox.Id}/0/{a}");
-                a++;
-                while (File.Exists($"../MailPlugin.Mailboxes/{mailbox.Id}/0/{a}"))
+                Mailboxes.Transaction(readMailbox.Id, (ref Mailbox mailbox, ref List<IFileAction> actions) =>
                 {
-                    File.Move($"../MailPlugin.Mailboxes/{mailbox.Id}/0/{a}", $"../MailPlugin.Mailboxes/{mailbox.Id}/0/{a - 1}");
-                    a++;
-                }
-                mailbox.UnlockSave();
+                    if (!mailbox.Messages.TryGetValue(0, out var message))
+                        return;
+                    
+                    message.Attachments.RemoveAt(a);
+                    if (a == message.Attachments.Count)
+                    {
+                        actions.Add(new DeleteFileAction($"0/{a}"));
+                    }
+                    else
+                    {
+                        a++;
+                        while (mailbox.ContainsFile($"0/{a}"))
+                        {
+                            actions.Add(new MoveFileAction($"0/{a}", $"0/{a - 1}"));
+                            a++;
+                        }
+                    }
+                });
             } break;
 
 
@@ -303,18 +339,17 @@ public partial class MailPlugin : Plugin
                 page.Scripts.Add(new Script("../query.js"));
                 page.Scripts.Add(new Script("contacts.js"));
                 page.Sidebar.Add(new ButtonElement("Mailboxes:", null, "."));
-                foreach (var m in (Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : [])
-                    .OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@')))
+                foreach (var m in EnumerateAccessibleMailboxes(req))
                     page.Sidebar.Add(new ButtonElement(null, m.Address, $"contacts?mailbox={m.Id}"));
                 HighlightSidebar("contacts", page, req, "search");
-                if (!mailbox.Messages.TryGetValue(0, out var message))
+                if (!mailbox.Messages.ContainsKey(0))
                 {
                     e.Add(new LargeContainerElement("No draft found!", "", "red"));
                     break;
                 }
                 e.Add(new LargeContainerElement("Send an email", $"From: {mailbox.Address}{(mailbox.Name == null ? "" : $" ({mailbox.Name})")}", id: "e1"));
                 e.Add(new ContainerElement(null, new TextBox("Search...", query, "search", onEnter: $"Search()", autofocus: true)));
-                Presets.AddError(page);
+                page.AddError();
                 if (mailbox.Contacts.Count == 0)
                     e.Add(new ContainerElement("No contacts found!", "", "red"));
                 else
@@ -332,20 +367,20 @@ public partial class MailPlugin : Plugin
 
             case "/send/contacts/add":
             { POST(req);
-                if (InvalidMailbox(req, out var mailbox))
+                if (InvalidMailbox(req, out var readMailbox))
                     break;
                 if (!req.Query.TryGetValue("email", out string? email))
                     throw new BadRequestSignal();
-                if (!mailbox.Messages.TryGetValue(0, out var message))
+                if (!readMailbox.Messages.TryGetValue(0, out var readMessage))
                     throw new NotFoundSignal();
-                if (message.InReplyToId != null)
+                if (readMessage.InReplyToId != null)
                     throw new ForbiddenSignal();
-                if (!message.To.Any(x => x.Address == email))
-                {
-                    mailbox.Lock();
-                    message.To.Add(new(email, mailbox.Contacts.TryGetValue(email, out var contact) ? contact.Name : email));
-                    mailbox.UnlockSave();
-                }
+                if (readMessage.To.All(x => x.Address != email))
+                    Mailboxes.Transaction(readMailbox.Id, (ref Mailbox mailbox) =>
+                    {
+                        if (mailbox.Messages.TryGetValue(0, out var message))
+                            message.To.Add(new(email, mailbox.Contacts.TryGetValue(email, out var contact) ? contact.Name : email));
+                    });
             } break;
 
 
@@ -362,8 +397,7 @@ public partial class MailPlugin : Plugin
                 page.Scripts.Add(new Script("../query.js"));
                 page.Scripts.Add(new Script("preview.js"));
                 page.Sidebar.Add(new ButtonElement("Mailboxes:", null, "."));
-                foreach (var m in (Mailboxes.UserAllowedMailboxes.TryGetValue(req.UserTable.Name, out var accessDict) && accessDict.TryGetValue(req.User.Id, out var accessSet) ? accessSet : [])
-                    .OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@')))
+                foreach (var m in EnumerateAccessibleMailboxes(req))
                     page.Sidebar.Add(new ButtonElement(null, m.Address, $"preview?mailbox={m.Id}"));
                 HighlightSidebar("preview", page, req);
                 if (!mailbox.Messages.TryGetValue(0, out var message))
@@ -381,12 +415,9 @@ public partial class MailPlugin : Plugin
                 else headingContents.Add(new Paragraph("To: [no recipients]"));
                 headingContents.Add(new Paragraph("Subject: " + (message.Subject == "" ? "[no subject]" : message.Subject)));
                 e.Add(new LargeContainerElement("Preview draft", headingContents) { Button = new ButtonJS("Send", "Send()", "green", id: "send") });
-                Presets.AddError(page);
+                page.AddError();
 
-                string messagePath = $"../MailPlugin.Mailboxes/{mailbox.Id}/0/";
-                string? c = null;
-                if (File.Exists(messagePath + "text"))
-                    c = AddHTML(File.ReadAllText(messagePath + "text").Trim());
+                string? c = mailbox.GetFileText("0/text")?.Map(t => AddHTML(t.Trim()));
                 List<IContent>? textContents = c == null ? null : ReadHTML(c, true);
                 if (textContents == null || (textContents.Count == 1 && textContents.First() is Paragraph p && (p.Text == "" || p.Text == "<br/>")))
                     e.Add(new ContainerElement("No text attached!", "", "red"));
@@ -400,9 +431,11 @@ public partial class MailPlugin : Plugin
                     {
                         e.Add(new ContainerElement(null,
                         [
+                            // ReSharper disable once ConstantNullCoalescingCondition
                             new Paragraph("File: " + attachment.Name ?? "Unknown name"),
+                            // ReSharper disable once ConstantNullCoalescingCondition
                             new Paragraph("Type: " + attachment.MimeType ?? "Unknown type"),
-                            new Paragraph("Size: " + FileSizeString(new FileInfo($"../MailPlugin.Mailboxes/{mailbox.Id}/0/{attachmentId}").Length))
+                            new Paragraph("Size: " + FileSizeString(mailbox.TryGetFileInfo($"0/{attachmentId}", out var fileData) ? fileData.Size : 0L))
                         ])
                         { Buttons =
                             [

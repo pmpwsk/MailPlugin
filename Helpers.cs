@@ -3,7 +3,7 @@ using uwap.WebFramework.Elements;
 
 namespace uwap.WebFramework.Plugins;
 
-public partial class MailPlugin : Plugin
+public partial class MailPlugin
 {
     private static void CreatePage(Request req, string title, out Page page, out List<IPageElement> e)
     {

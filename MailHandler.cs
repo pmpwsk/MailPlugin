@@ -3,18 +3,20 @@ using SmtpServer;
 using SmtpServer.Mail;
 using SmtpServer.Protocol;
 using System.Diagnostics.CodeAnalysis;
+using uwap.Database;
 using uwap.WebFramework.Mail;
 using static uwap.WebFramework.Mail.MailAuth;
 
 namespace uwap.WebFramework.Plugins;
 
-public partial class MailPlugin : Plugin
+public partial class MailPlugin
 {
     private bool BeforeSend(MailGen mailGen, MailboxAddress currentRecipient, string potentialMessageId, [MaybeNullWhen(true)] out string log)
     {
-        if (!Mailboxes.MailboxByAddress.TryGetValue(currentRecipient.Address, out var mailbox))
+        var mailboxId = Mailboxes.AddressIndex.Get(currentRecipient.Address);
+        if (mailboxId == null)
         {
-            if (SendMissingInternalRecipientsExternally || !Mailboxes.MailboxByAddress.Keys.Any(x => x.EndsWith('@' + currentRecipient.Domain)))
+            if (SendMissingInternalRecipientsExternally || !Mailboxes.AddressIndex.Keys.Any(x => x.EndsWith('@' + currentRecipient.Domain)))
             {
                 log = null;
                 return true;
@@ -26,25 +28,25 @@ public partial class MailPlugin : Plugin
             }    
         }
 
-        mailbox.Lock();
-        ulong messageId = (ulong)DateTime.UtcNow.Ticks;
-        while (mailbox.Messages.ContainsKey(messageId))
-            messageId++;
-        mailbox.Messages[messageId] = new(true, DateTime.UtcNow, mailGen, potentialMessageId);
-        mailbox.Folders["Inbox"].Add(messageId);
-        mailbox.UnlockSave();
-        Directory.CreateDirectory($"../MailPlugin.Mailboxes/{mailbox.Id}/{messageId}");
-        if (mailGen.TextBody != null)
-            File.WriteAllText($"../MailPlugin.Mailboxes/{mailbox.Id}/{messageId}/text", mailGen.TextBody);
-        if (mailGen.HtmlBody != null)
-            File.WriteAllText($"../MailPlugin.Mailboxes/{mailbox.Id}/{messageId}/html", mailGen.HtmlBody);
-        int attachmentIndex = 0;
-        foreach (var attachment in mailGen.Attachments)
+        Mailboxes.Transaction(mailboxId, (ref Mailbox mailbox, ref List<IFileAction> actions) =>
         {
-            File.WriteAllBytes($"../MailPlugin.Mailboxes/{mailbox.Id}/{messageId}/{attachmentIndex}", attachment.Bytes);
-            attachmentIndex++;
-        }
-        if (IncomingListeners.TryGetValue(mailbox, out var listenerKV))
+            ulong messageId = (ulong)DateTime.UtcNow.Ticks;
+            while (mailbox.Messages.ContainsKey(messageId))
+                messageId++;
+            mailbox.Messages[messageId] = new(true, DateTime.UtcNow, mailGen, potentialMessageId);
+            mailbox.Folders["Inbox"].Add(messageId);
+            if (mailGen.TextBody != null)
+                actions.Add(new SetFileAction($"{messageId}/text", path => File.WriteAllText(path, mailGen.TextBody)));
+            if (mailGen.HtmlBody != null)
+                actions.Add(new SetFileAction($"{messageId}/html", path => File.WriteAllText(path, mailGen.HtmlBody)));
+            int attachmentIndex = 0;
+            foreach (var attachment in mailGen.Attachments)
+            {
+                actions.Add(new SetFileAction($"{messageId}/{attachmentIndex}", path => File.WriteAllBytes(path, attachment.Bytes)));
+                attachmentIndex++;
+            }
+        });
+        if (IncomingListeners.TryGetValue(mailboxId, out var listenerKV))
             foreach (var listenerKKV in listenerKV)
                 try
                 {
@@ -63,10 +65,10 @@ public partial class MailPlugin : Plugin
     public bool MailboxExists(ISessionContext context, IMailbox from, IMailbox to)
     {
         //Option 1: check if any addresses with that host domain exist (so that spammers/attackers can't scan for what mailboxes exist for a given domain)
-        return Mailboxes.MailboxByAddress.Keys.Any(x => x.EndsWith('@' + to.Host));
+        return Mailboxes.AddressIndex.Keys.Any(x => x.EndsWith('@' + to.Host));
 
         //Option 2: check if that exact recipient address exists
-        //return Mailboxes.MailboxByAddress.ContainsKey(from.AsAddress());
+        //return Mailboxes.AddressIndex.Get(from.AsAddress()) != null;
     }
 
     public SmtpResponse HandleMail(ISessionContext context, MimeMessage message, MailConnectionData connectionData)
@@ -74,14 +76,14 @@ public partial class MailPlugin : Plugin
         MailboxAddress? from = message.From.Mailboxes.FirstOrDefault();
         if (from == null || !message.To.Mailboxes.Any())
             return SmtpResponse.SyntaxError;
-        IEnumerable<MailboxAddress> mailboxes = message.To.Mailboxes.Union(message.Cc.Mailboxes).Union(message.Bcc.Mailboxes).Where(x => Mailboxes.MailboxByAddress.ContainsKey(x.Address));
-        if (mailboxes.Any())
+        var mailboxes = message.To.Mailboxes.Union(message.Cc.Mailboxes).Union(message.Bcc.Mailboxes).Where(x => Mailboxes.AddressIndex.Get(x.Address) != null).ToList();
+        if (mailboxes.Count != 0)
         {
             List<string> log = [];
             FullResult authResult = CheckEverything(connectionData, message, log);
             List<MailAttachment> attachments = message.Attachments.Select(x =>
             {
-                string? fileName = x.ContentDisposition.FileName?.Trim()?.HtmlSafe();
+                string? fileName = x.ContentDisposition.FileName?.Trim().HtmlSafe();
                 if (fileName == "")
                     fileName = null;
                 string? mimeType = x.ContentType.MimeType?.Trim().HtmlSafe();
@@ -92,34 +94,57 @@ public partial class MailPlugin : Plugin
             MailMessage mail = new(true, DateTime.UtcNow, message, attachments, authResult, log);
             foreach (string toAddress in mailboxes.Select(x => x.Address))
             {
-                Mailbox mailbox = Mailboxes.MailboxByAddress[toAddress];
-                mailbox.Lock();
-                ulong messageId = (ulong)mail.TimestampUtc.Ticks;
-                while (mailbox.Messages.ContainsKey(messageId))
-                    messageId++;
-                mailbox.Messages[messageId] = mail;
-                mailbox.Folders[mailbox.AuthRequirements.SatisfiedBy(authResult) ? "Inbox" : "Spam"].Add(messageId);
-                mailbox.UnlockSave();
-                Directory.CreateDirectory($"../MailPlugin.Mailboxes/{mailbox.Id}/{messageId}");
-                if (message.TextBody != null)
-                    File.WriteAllText($"../MailPlugin.Mailboxes/{mailbox.Id}/{messageId}/text", message.TextBody);
-                if (message.HtmlBody != null)
-                    File.WriteAllText($"../MailPlugin.Mailboxes/{mailbox.Id}/{messageId}/html", message.HtmlBody);
-                int attachmentIndex = 0;
-                foreach (var attachment in message.Attachments)
+                var mailboxId = Mailboxes.AddressIndex.Get(toAddress);
+                if (mailboxId == null)
+                    continue;
+                
+                List<string> tempFiles = [];
+                try
                 {
-                    using var stream = File.OpenWrite($"../MailPlugin.Mailboxes/{mailbox.Id}/{messageId}/{attachmentIndex}");
-                    if (attachment is MessagePart messagePart)
-                        messagePart.Message.WriteTo(stream);
-                    else if (attachment is MimePart mimePart)
-                        mimePart.Content.DecodeTo(stream);
-                    else Console.WriteLine($"UNRECOGNIZED MAIL ATTACHMENT TYPE {attachment.GetType().FullName}");
-                    stream.Flush();
-                    stream.Close();
-                    stream.Dispose();
-                    attachmentIndex++;
+                    Mailboxes.Transaction(mailboxId, (ref Mailbox mailbox, ref List<IFileAction> actions) =>
+                    {
+                        ulong messageId = (ulong)mail.TimestampUtc.Ticks;
+                        while (mailbox.Messages.ContainsKey(messageId))
+                            messageId++;
+                        mailbox.Messages[messageId] = mail;
+                        mailbox.Folders[mailbox.AuthRequirements.SatisfiedBy(authResult) ? "Inbox" : "Spam"].Add(messageId);
+                        
+                        if (message.TextBody != null)
+                            actions.Add(new SetFileAction($"{messageId}/text", path => File.WriteAllText(path, message.TextBody)));
+                        if (message.HtmlBody != null)
+                            actions.Add(new SetFileAction($"{messageId}/html", path => File.WriteAllText(path, message.HtmlBody)));
+                        int attachmentIndex = 0;
+                        foreach (var attachment in message.Attachments)
+                        {
+                            var temp = Path.GetTempFileName();
+                            tempFiles.Add(temp);
+                            using var stream = File.OpenWrite(temp);
+                            switch (attachment)
+                            {
+                                case MessagePart messagePart:
+                                    messagePart.Message.WriteTo(stream);
+                                    break;
+                                case MimePart mimePart:
+                                    mimePart.Content.DecodeTo(stream);
+                                    break;
+                                default:
+                                    Console.WriteLine($"UNRECOGNIZED MAIL ATTACHMENT TYPE {attachment.GetType().FullName}");
+                                    break;
+                            }
+                            stream.Flush();
+                            stream.Close();
+                            actions.Add(new SetFileAction($"{messageId}/{attachmentIndex}", path => File.Move(temp, path)));
+                            attachmentIndex++;
+                        }
+                    });
                 }
-                if (IncomingListeners.TryGetValue(mailbox, out var listenerKV))
+                finally
+                {
+                    foreach (var temp in tempFiles)
+                        if (File.Exists(temp))
+                            File.Delete(temp);
+                }
+                if (IncomingListeners.TryGetValue(mailboxId, out var listenerKV))
                     foreach (var listenerKKV in listenerKV)
                         try
                         {

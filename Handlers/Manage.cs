@@ -1,10 +1,9 @@
-﻿using System.Web;
-using uwap.WebFramework.Accounts;
+﻿using uwap.WebFramework.Accounts;
 using uwap.WebFramework.Elements;
 
 namespace uwap.WebFramework.Plugins;
 
-public partial class MailPlugin : Plugin
+public partial class MailPlugin
 {
     public async Task HandleManage(Request req)
     {
@@ -30,13 +29,13 @@ public partial class MailPlugin : Plugin
                     page.Scripts.Add(new Script("query.js"));
                     page.Scripts.Add(new Script("manage-mailbox.js"));
                     page.Sidebar.Add(new ButtonElement("Mailboxes:", null, "manage"));
-                    foreach (var m in Mailboxes.Select(x => x.Value).OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@')))
+                    foreach (var m in Mailboxes.ListAll().OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@')))
                         page.Sidebar.Add(new ButtonElement(null, m.Address, $"manage?mailbox={m.Id}"));
                     HighlightSidebar("manage", page, req);
                     e.Add(new LargeContainerElement("Manage " + mailbox.Address));
                     e.Add(new ButtonElementJS("Delete mailbox", null, "Delete()", id: "deleteButton"));
                     e.Add(new ContainerElement("Add access:", new TextBox("Enter a username...", null, "username", onEnter: "Add()")) { Button = new ButtonJS("Add", "Add()", "green") });
-                    Presets.AddError(page);
+                    page.AddError();
                     if (mailbox.AllowedUserIds.Any(x => x.Value.Count != 0))
                         foreach (var userTableKV in mailbox.AllowedUserIds)
                         {
@@ -55,13 +54,13 @@ public partial class MailPlugin : Plugin
                     page.Scripts.Add(Presets.SendRequestScript);
                     page.Scripts.Add(new Script("manage.js"));
                     e.Add(new LargeContainerElement("Manage mailboxes", ""));
-                    var mailboxes = Mailboxes.Select(x => x.Value).OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@'));
+                    var mailboxes = Mailboxes.ListAll();
                     e.Add(new ContainerElement("Create mailbox:", new TextBox("Enter an address...", null, "address", onEnter: "Create()")) { Button = new ButtonJS("Create", "Create()", "green") });
-                    Presets.AddError(page);
-                    if (mailboxes.Any())
-                        foreach (Mailbox m in mailboxes)
-                            e.Add(new ButtonElement(m.Address, m.Name ?? "", $"manage?mailbox={m.Id}"));
-                    else e.Add(new ContainerElement("No mailboxes!", "", "red"));
+                    page.AddError();
+                    foreach (Mailbox m in mailboxes.OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@')))
+                        e.Add(new ButtonElement(m.Address, m.Name ?? "", $"manage?mailbox={m.Id}"));
+                    if (mailboxes.Count == 0)
+                        e.Add(new ContainerElement("No mailboxes!", "", "red"));
                 }
             } break;
 
@@ -72,18 +71,13 @@ public partial class MailPlugin : Plugin
                     throw new BadRequestSignal();
                 if (!AccountManager.CheckMailAddressFormat(address))
                     await req.Write("format");
-                else if (Mailboxes.MailboxByAddress.ContainsKey(address))
+                else if (Mailboxes.AddressIndex.Get(address) != null)
                     await req.Write("exists");
                 else
                 {
-                    string id;
-                    do id = Parsers.RandomString(10);
-                    while (Mailboxes.ContainsKey(id));
-                    Mailbox mailbox = new(id, address);
-                    Mailboxes[id] = mailbox;
-                    MailboxTable.AddToAccelerators(mailbox, Mailboxes.UserAllowedMailboxes, Mailboxes.MailboxByAddress);
-                    Directory.CreateDirectory($"../MailPlugin.Mailboxes/{mailbox.Id}");
-                    await req.Write("mailbox=" + id);
+                    Mailbox mailbox = new(address);
+                    Mailboxes.Create(10, mailbox);
+                    await req.Write("mailbox=" + mailbox.Id);
                 }
             } break;
 
@@ -92,13 +86,7 @@ public partial class MailPlugin : Plugin
                 req.ForceAdmin(false);
                 if (!req.Query.TryGetValue("mailbox", out string? mailboxId))
                     throw new BadRequestSignal();
-                if (Mailboxes.TryGetValue(mailboxId, out Mailbox? mailbox))
-                {
-                    Mailboxes.Delete(mailboxId);
-                    MailboxTable.RemoveFromAccelerators(mailbox, Mailboxes.UserAllowedMailboxes, Mailboxes.MailboxByAddress);
-                    if (Directory.Exists($"../MailPlugin.Mailboxes/{mailbox.Id}"))
-                        Directory.Delete($"../MailPlugin.Mailboxes/{mailbox.Id}", true);
-                }
+                Mailboxes.Delete(mailboxId);
             } break;
 
             case "/manage/add-access":
@@ -126,61 +114,34 @@ public partial class MailPlugin : Plugin
                     await req.Write("invalid");
                     break;
                 }
-                if (!Mailboxes.TryGetValue(mailboxId, out Mailbox? mailbox))
-                    throw new NotFoundSignal();
-                mailbox.Lock();
-                if (!mailbox.AllowedUserIds.TryGetValue(userTable.Name, out var userTableDict))
+                
+                Mailboxes.TransactionNullable(mailboxId, (ref Mailbox? mailbox) =>
                 {
-                    userTableDict = [];
-                    mailbox.AllowedUserIds[userTable.Name] = userTableDict;
-                }
-                userTableDict.Add(user.Id);
-                if (!Mailboxes.UserAllowedMailboxes.TryGetValue(userTable.Name, out var userTableDict2))
-                {
-                    userTableDict2 = [];
-                    Mailboxes.UserAllowedMailboxes[userTable.Name] = userTableDict2;
-                }
-                if (!userTableDict2.TryGetValue(user.Id, out var userSet))
-                {
-                    userSet = [];
-                    userTableDict2[user.Id] = userSet;
-                }
-                userSet.Add(mailbox);
-                mailbox.UnlockSave();
+                    if (mailbox == null)
+                        throw new NotFoundSignal();
+                    var set = mailbox.AllowedUserIds.GetValueOrAdd(userTable.Name, () => []);
+                    set.Add(user.Id);
+                });
                 await req.Write("ok");
             } break;
 
             case "/manage/remove-access":
             { POST(req);
                 req.ForceAdmin(false);
-                if ((!req.Query.TryGetValue("mailbox", out var mailboxId)) || !req.Query.TryGetValue("id", out var idCombined))
+                if (!req.Query.TryGetValue("mailbox", out var mailboxId) || !req.Query.TryGetValue("id", out var idCombined))
                     throw new BadRequestSignal();
                 int colon = idCombined.IndexOf(':');
                 if (colon == -1)
                     throw new BadRequestSignal();
                 string userTableName = idCombined.Remove(colon);
                 string userId = idCombined.Remove(0, colon + 1);
-                if (!Mailboxes.TryGetValue(mailboxId, out Mailbox? mailbox))
-                    throw new NotFoundSignal();
-                mailbox.Lock();
-                if (mailbox.AllowedUserIds.TryGetValue(userTableName, out var userTableSet))
+                
+                Mailboxes.TransactionNullable(mailboxId, (ref Mailbox? mailbox) =>
                 {
-                    userTableSet.Remove(userId);
-                    if (userTableSet.Count == 0)
-                        mailbox.AllowedUserIds.Remove(userTableName);
-                }
-                if (Mailboxes.UserAllowedMailboxes.TryGetValue(userTableName, out var userTableDict))
-                {
-                    if (userTableDict.TryGetValue(userId, out var userSet))
-                    {
-                        userSet.Remove(mailbox);
-                        if (userSet.Count == 0)
-                            userTableDict.Remove(userId);
-                    }
-                    if (userTableDict.Count == 0)
-                        Mailboxes.UserAllowedMailboxes.Remove(userTableName);
-                }
-                mailbox.UnlockSave();
+                    if (mailbox == null)
+                        throw new NotFoundSignal();
+                    mailbox.AllowedUserIds.RemoveAndClean(userTableName, userId);
+                });
             } break;
             
 

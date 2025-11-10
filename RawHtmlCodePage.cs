@@ -1,6 +1,6 @@
 ﻿namespace uwap.WebFramework.Plugins;
 
-public partial class MailPlugin : Plugin
+public partial class MailPlugin
 {
     private class RawHtmlCodePage : IPage
     {

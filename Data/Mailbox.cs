@@ -3,66 +3,63 @@ using uwap.Database;
 
 namespace uwap.WebFramework.Plugins;
 
-public partial class MailPlugin : Plugin
+public partial class MailPlugin
 {
     [DataContract]
-    public class Mailbox : ITableValue
+    public class Mailbox(string address) : AbstractTableValue
     {
         [DataMember]
-        public readonly string Id;
+        public readonly string Address = address;
 
         [DataMember]
-        public readonly string Address;
+        public string? Name = null;
 
         [DataMember]
-        public string? Name;
+        public readonly Dictionary<string, HashSet<string>> AllowedUserIds = []; //first key=usertable.Name, second key/value=user id in the table
 
         [DataMember]
-        public readonly Dictionary<string, HashSet<string>> AllowedUserIds; //first key=usertable.Name, second key/value=user id in the table
+        public readonly Dictionary<ulong, MailMessage> Messages = []; //key is the unique id of the message across all folders (timestamp ticks as ulong, then increased by 1 until an empty spot was found
 
         [DataMember]
-        public readonly Dictionary<ulong, MailMessage> Messages; //key is the unique id of the message across all folders (timestamp ticks as ulong, then increased by 1 until an empty spot was found
+        public readonly Dictionary<string, SortedSet<ulong>> Folders = new()
+        {
+            { "Inbox", [] },
+            { "Sent", [] },
+            { "Trash", [] },
+            { "Spam", [] }
+        }; //key is the folder name, value is the list of message ids within it, sorted by time
 
         [DataMember]
-        public readonly Dictionary<string, SortedSet<ulong>> Folders; //key is the folder name, value is the list of message ids within it, sorted by time
+        public readonly Dictionary<string, MailContact> Contacts = []; //key=address, value=contact object
 
         [DataMember]
-        public readonly Dictionary<string, MailContact> Contacts; //key=address, value=contact object
+        public readonly HashSet<string> BlockedAddresses = [];
 
         [DataMember]
-        public readonly HashSet<string> BlockedAddresses;
+        public string? Footer = null;
 
         [DataMember]
-        public string? Footer;
+        public readonly MailAuthRequirements AuthRequirements = new();
 
         [DataMember]
-        public readonly MailAuthRequirements AuthRequirements;
-
-        [DataMember]
-        public readonly Dictionary<string, string> CustomSettings;
+        public readonly Dictionary<string, string> CustomSettings = [];
 
         [DataMember]
         public bool ShowExternalImageLinks = false;
-
-        public Mailbox(string id, string address)
+        
+        protected override void Migrate(string tableName, string id, byte[] serialized)
         {
-            Id = id;
-            Address = address;
-            Name = null;
-            AllowedUserIds = [];
-            Messages = [];
-            Folders = new()
+            if (AssemblyVersion == new Version(0, 0, 0, 0))
             {
-                { "Inbox", [] },
-                { "Sent", [] },
-                { "Trash", [] },
-                { "Spam", [] }
-            };
-            Contacts = [];
-            BlockedAddresses = [];
-            Footer = null;
-            AuthRequirements = new();
-            CustomSettings = [];
+                var dir = new DirectoryInfo($"../MailPlugin.Mailboxes/{id}");
+                if (dir.Exists)
+                {
+                    foreach (var messageDir in dir.GetDirectories("*", SearchOption.TopDirectoryOnly))
+                        foreach (var file in messageDir.GetFiles("*", SearchOption.TopDirectoryOnly))
+                            MigrateLegacyFile(tableName, id, $"{messageDir.Name}/{file.Name}", file.FullName);
+                    dir.Delete(true);
+                }
+            }
         }
     }
 }

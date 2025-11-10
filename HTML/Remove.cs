@@ -2,7 +2,7 @@
 using uwap.WebFramework.Elements;
 namespace uwap.WebFramework.Plugins;
 
-public partial class MailPlugin : Plugin
+public partial class MailPlugin
 {
     internal static string RemoveHTML(string code)
         => new HTMLRemover().Read(code);

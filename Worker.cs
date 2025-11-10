@@ -1,35 +1,27 @@
-﻿namespace uwap.WebFramework.Plugins;
+﻿using uwap.Database;
 
-public partial class MailPlugin : Plugin
+namespace uwap.WebFramework.Plugins;
+
+public partial class MailPlugin
 {
     public override Task Work()
     {
-        Mailboxes.RebuildAccelerators();
-
-        foreach (var mailboxKV in Mailboxes)
+        foreach (var listedMailbox in Mailboxes.ListAll())
         {
-            Mailbox mailbox = mailboxKV.Value;
             List<ulong> due = [];
-            foreach (var messageKV in mailboxKV.Value.Messages)
+            foreach (var messageKV in listedMailbox.Messages)
             {
                 DateTime? deleted = messageKV.Value.Deleted;
                 if (deleted != null && (deleted.Value + TimeSpan.FromDays(30)) <= DateTime.UtcNow)
                     due.Add(messageKV.Key);
             }
+            
             if (due.Count > 0)
-            {
-                mailbox.Lock();
-                foreach (ulong messageId in due)
+                Mailboxes.TransactionIgnoreNull(listedMailbox.Id, (ref Mailbox mailbox, ref List<IFileAction> fileActions) =>
                 {
-                    string messagePath = $"../MailPlugin.Mailboxes/{mailbox.Id}/{messageId}";
-                    if (Directory.Exists(messagePath))
-                        Directory.Delete(messagePath, true);
-                    mailbox.Messages.Remove(messageId);
-                    foreach (var folderKV in mailbox.Folders)
-                        folderKV.Value.Remove(messageId);
-                }
-                mailbox.UnlockSave();
-            }    
+                    foreach (ulong messageId in due)
+                        DeleteMessage(mailbox, fileActions, messageId);
+                });
         }
 
         return Task.CompletedTask;

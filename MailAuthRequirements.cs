@@ -3,7 +3,7 @@ using static uwap.WebFramework.Mail.MailAuth;
 
 namespace uwap.WebFramework.Plugins;
 
-public partial class MailPlugin : Plugin
+public partial class MailPlugin
 {
     [DataContract]
     public class MailAuthRequirements

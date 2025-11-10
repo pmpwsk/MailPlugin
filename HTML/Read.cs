@@ -3,7 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using uwap.WebFramework.Elements;
 namespace uwap.WebFramework.Plugins;
 
-public partial class MailPlugin : Plugin
+public partial class MailPlugin
 {
     internal static List<IContent> ReadHTML(string code, bool includeImageLinks)
         => new HTMLReader(includeImageLinks).ReadHTML(code);

@@ -103,10 +103,8 @@ async function Send() {
 function ShowError(message) {
     error.firstElementChild.innerText = message;
     error.style.display = "block";
-    Resize();
 }
 
 function HideError() {
     error.style.display = "none";
-    Resize();
 }

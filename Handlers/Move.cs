@@ -3,7 +3,7 @@ using uwap.WebFramework.Elements;
 
 namespace uwap.WebFramework.Plugins;
 
-public partial class MailPlugin : Plugin
+public partial class MailPlugin
 {
     public Task HandleMove(Request req)
     {
@@ -33,16 +33,25 @@ public partial class MailPlugin : Plugin
 
             case "/move/do":
             { POST(req);
-                if (InvalidMailboxOrMessageOrFolder(req, out var mailbox, out _, out var messageId, out var folder, out var folderName))
+                if (InvalidMailboxOrMessageOrFolder(req, out var readMailbox, out _, out var messageId, out _, out var folderName))
                     break;
-                if ((!req.Query.TryGetValue("new", out var newFolderName)) || folderName == "Sent" || newFolderName == "Sent" || folderName == newFolderName)
+                if (!req.Query.TryGetValue("new", out var newFolderName) || folderName == "Sent" || newFolderName == "Sent" || folderName == newFolderName)
                     throw new BadRequestSignal();
-                if (!mailbox.Folders.TryGetValue(newFolderName, out var newFolder))
-                    throw new NotFoundSignal();
-                mailbox.Lock();
-                folder.Remove(messageId);
-                newFolder.Add(messageId);
-                mailbox.UnlockSave();
+                
+                Mailboxes.Transaction(readMailbox.Id, (ref Mailbox mailbox) =>
+                {
+                    if (!mailbox.Folders.TryGetValue(folderName, out var folder)
+                        || !mailbox.Folders.TryGetValue(newFolderName, out var newFolder))
+                        throw new NotFoundSignal();
+                    
+                    if (mailbox.Messages.TryGetValue(messageId, out var message))
+                        if (newFolderName == "Trash")
+                            message.Deleted = DateTime.UtcNow;
+                        else message.Deleted = null;
+                    
+                    folder.Remove(messageId);
+                    newFolder.Add(messageId);
+                });
             } break;
             
 
