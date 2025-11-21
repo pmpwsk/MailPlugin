@@ -1,5 +1,5 @@
 ﻿using MimeKit;
-using uwap.Database;
+using uwap.WebFramework.Database;
 using uwap.WebFramework.Accounts;
 using uwap.WebFramework.Elements;
 using uwap.WebFramework.Mail;

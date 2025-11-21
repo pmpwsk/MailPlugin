@@ -1,7 +1,8 @@
 ﻿using System.Web;
-using uwap.Database;
+using uwap.WebFramework.Database;
 using uwap.WebFramework.Accounts;
 using uwap.WebFramework.Elements;
+using uwap.WebFramework.Tools;
 using static uwap.WebFramework.Mail.MailAuth;
 
 namespace uwap.WebFramework.Plugins;

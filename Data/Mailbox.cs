@@ -1,5 +1,5 @@
 ﻿using System.Runtime.Serialization;
-using uwap.Database;
+using uwap.WebFramework.Database;
 
 namespace uwap.WebFramework.Plugins;
 

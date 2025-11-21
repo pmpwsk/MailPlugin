@@ -3,7 +3,7 @@ using SmtpServer;
 using SmtpServer.Mail;
 using SmtpServer.Protocol;
 using System.Diagnostics.CodeAnalysis;
-using uwap.Database;
+using uwap.WebFramework.Database;
 using uwap.WebFramework.Mail;
 using static uwap.WebFramework.Mail.MailAuth;
 

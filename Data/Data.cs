@@ -1,5 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using uwap.Database;
+using uwap.WebFramework.Database;
 using uwap.WebFramework.Elements;
 
 namespace uwap.WebFramework.Plugins;
