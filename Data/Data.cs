@@ -120,7 +120,8 @@ public partial class MailPlugin
             mailbox = null;
             return true;
         }
-        if (!Mailboxes.TryGetValue(mailboxId, out mailbox))
+        mailbox = Mailboxes.GetByIdNullableAsync(mailboxId).GetAwaiter().GetResult();
+        if (mailbox == null)
         {
             if (req.Page is Page page)
                 page.Elements.Add(new LargeContainerElement("Error", "This mailbox doesn't exist!", "red"));
@@ -262,10 +263,10 @@ public partial class MailPlugin
             attachmentId++;
     }
     
-    private IEnumerable<Mailbox> EnumerateAccessibleMailboxes(Request req)
-        => EnumerateAccessibleMailboxes(req.UserTable.Name, req.User.Id);
+    private Task<List<Mailbox>> ListAccessibleMailboxesAsync(Request req)
+        => ListAccessibleMailboxesAsync(req.UserTable.Name, req.User.Id);
     
-    private IEnumerable<Mailbox> EnumerateAccessibleMailboxes(string userTableName, string userId)
-        => Mailboxes.EnumerateExistingByIds(Mailboxes.AllowedMailboxesIndex.Get((userTableName, userId)))
-            .OrderBy(m => m.Address.After('@')).ThenBy(x => x.Address.Before('@'));
+    private async Task<List<Mailbox>> ListAccessibleMailboxesAsync(string userTableName, string userId)
+        => (await Mailboxes.ListExistingByIdsAsync(await Mailboxes.AllowedMailboxesIndex.GetAsync((userTableName, userId))))
+            .OrderBy(m => m.Address.After('@')).ThenBy(x => x.Address.Before('@')).ToList();
 }

@@ -8,9 +8,14 @@ public partial class MailPlugin
     {
         if (assignEvents)
         {
-            MailManager.In.MailboxExists.Register(MailboxExists);
-            MailManager.In.HandleMail.Register(HandleMail);
-            MailManager.Out.BeforeSend.Register(BeforeSend);
+            AssignEvents().GetAwaiter().GetResult();
         }
+    }
+    
+    private async Task AssignEvents()
+    {
+        await MailManager.In.MailboxExists.RegisterAsync(MailboxExistsAsync);
+        await MailManager.In.HandleMail.RegisterAsync(HandleMailAsync);
+        await MailManager.Out.BeforeSend.RegisterAsync(BeforeSendAsync);
     }
 }

@@ -1,12 +1,10 @@
-﻿using uwap.WebFramework.Database;
-
-namespace uwap.WebFramework.Plugins;
+﻿namespace uwap.WebFramework.Plugins;
 
 public partial class MailPlugin
 {
-    public override Task Work()
+    public override async Task Work()
     {
-        foreach (var listedMailbox in Mailboxes.ListAll())
+        foreach (var listedMailbox in await Mailboxes.ListAllAsync())
         {
             List<ulong> due = [];
             foreach (var messageKV in listedMailbox.Messages)
@@ -17,13 +15,11 @@ public partial class MailPlugin
             }
             
             if (due.Count > 0)
-                Mailboxes.TransactionIgnoreNull(listedMailbox.Id, (ref Mailbox mailbox, ref List<IFileAction> fileActions) =>
+                await Mailboxes.TransactionIgnoreNullAsync(listedMailbox.Id, t =>
                 {
                     foreach (ulong messageId in due)
-                        DeleteMessage(mailbox, fileActions, messageId);
+                        DeleteMessage(t.Value, t.FileActions, messageId);
                 });
         }
-
-        return Task.CompletedTask;
     }
 }

@@ -16,7 +16,8 @@ public partial class MailPlugin
                 //create and delete mailboxes, add and remove access to them (update the cache dictionary in both cases!!!)
                 if (req.Query.TryGetValue("mailbox", out string? mailboxId))
                 {
-                    if (!Mailboxes.TryGetValue(mailboxId, out Mailbox? mailbox))
+                    var mailbox = await Mailboxes.GetByIdNullableAsync(mailboxId);
+                    if (mailbox == null)
                     {
                         //mailbox doesn't exist
                         e.Add(new LargeContainerElement("Error", "This mailbox doesn't exist!", "red"));
@@ -29,7 +30,7 @@ public partial class MailPlugin
                     page.Scripts.Add(new Script("query.js"));
                     page.Scripts.Add(new Script("manage-mailbox.js"));
                     page.Sidebar.Add(new ButtonElement("Mailboxes:", null, "manage"));
-                    foreach (var m in Mailboxes.ListAll().OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@')))
+                    foreach (var m in (await Mailboxes.ListAllAsync()).OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@')))
                         page.Sidebar.Add(new ButtonElement(null, m.Address, $"manage?mailbox={m.Id}"));
                     HighlightSidebar("manage", page, req);
                     e.Add(new LargeContainerElement("Manage " + mailbox.Address));
@@ -41,8 +42,11 @@ public partial class MailPlugin
                         {
                             UserTable userTable = UserTable.Import(userTableKV.Key);
                             foreach (var userId in userTableKV.Value)
-                                if (userTable.TryGetValue(userId, out User? u))
+                            {
+                                var u = await userTable.GetByIdNullableAsync(userId);
+                                if (u != null)
                                     e.Add(new ContainerElement(u.Username, u.Id) { Button = new ButtonJS("Remove", $"Remove('{userTable.Name}:{userId}')", "red") });
+                            }
                         }
                     else e.Add(new ContainerElement("No allowed accounts!", "", "red"));
                 }
@@ -54,7 +58,7 @@ public partial class MailPlugin
                     page.Scripts.Add(Presets.SendRequestScript);
                     page.Scripts.Add(new Script("manage.js"));
                     e.Add(new LargeContainerElement("Manage mailboxes", ""));
-                    var mailboxes = Mailboxes.ListAll();
+                    var mailboxes = await Mailboxes.ListAllAsync();
                     e.Add(new ContainerElement("Create mailbox:", new TextBox("Enter an address...", null, "address", onEnter: "Create()")) { Button = new ButtonJS("Create", "Create()", "green") });
                     page.AddError();
                     foreach (Mailbox m in mailboxes.OrderBy(x => x.Address.After('@')).ThenBy(x => x.Address.Before('@')))
@@ -71,12 +75,12 @@ public partial class MailPlugin
                     throw new BadRequestSignal();
                 if (!AccountManager.CheckMailAddressFormat(address))
                     await req.Write("format");
-                else if (Mailboxes.AddressIndex.Get(address) != null)
+                else if (await Mailboxes.AddressIndex.GetAsync(address) != null)
                     await req.Write("exists");
                 else
                 {
                     Mailbox mailbox = new(address);
-                    Mailboxes.Create(10, mailbox);
+                    await Mailboxes.CreateAsync(10, mailbox);
                     await req.Write("mailbox=" + mailbox.Id);
                 }
             } break;
@@ -86,7 +90,7 @@ public partial class MailPlugin
                 req.ForceAdmin(false);
                 if (!req.Query.TryGetValue("mailbox", out string? mailboxId))
                     throw new BadRequestSignal();
-                Mailboxes.Delete(mailboxId);
+                await Mailboxes.DeleteAsync(mailboxId);
             } break;
 
             case "/manage/add-access":
@@ -108,18 +112,16 @@ public partial class MailPlugin
                     await req.Write("invalid");
                     break;
                 }
-                User? user = userTable.FindByUsername(username);
+                User? user = await userTable.FindByUsernameAsync(username);
                 if (user == null)
                 {
                     await req.Write("invalid");
                     break;
                 }
                 
-                Mailboxes.TransactionNullable(mailboxId, (ref Mailbox? mailbox) =>
+                await Mailboxes.TransactionAsync(mailboxId, t =>
                 {
-                    if (mailbox == null)
-                        throw new NotFoundSignal();
-                    var set = mailbox.AllowedUserIds.GetValueOrAdd(userTable.Name, () => []);
+                    var set = t.Value.AllowedUserIds.GetValueOrAdd(userTable.Name, () => []);
                     set.Add(user.Id);
                 });
                 await req.Write("ok");
@@ -136,11 +138,9 @@ public partial class MailPlugin
                 string userTableName = idCombined.Remove(colon);
                 string userId = idCombined.Remove(0, colon + 1);
                 
-                Mailboxes.TransactionNullable(mailboxId, (ref Mailbox? mailbox) =>
+                await Mailboxes.TransactionAsync(mailboxId, t =>
                 {
-                    if (mailbox == null)
-                        throw new NotFoundSignal();
-                    mailbox.AllowedUserIds.RemoveAndClean(userTableName, userId);
+                    t.Value.AllowedUserIds.RemoveAndClean(userTableName, userId);
                 });
             } break;
             

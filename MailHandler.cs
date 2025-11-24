@@ -2,7 +2,6 @@
 using SmtpServer;
 using SmtpServer.Mail;
 using SmtpServer.Protocol;
-using System.Diagnostics.CodeAnalysis;
 using uwap.WebFramework.Database;
 using uwap.WebFramework.Mail;
 using static uwap.WebFramework.Mail.MailAuth;
@@ -11,38 +10,32 @@ namespace uwap.WebFramework.Plugins;
 
 public partial class MailPlugin
 {
-    private bool BeforeSend(MailGen mailGen, MailboxAddress currentRecipient, string potentialMessageId, [MaybeNullWhen(true)] out string log)
+    private async Task<(bool SendExternally, string? Log)> BeforeSendAsync(MailGen mailGen, MailboxAddress currentRecipient, string potentialMessageId)
     {
-        var mailboxId = Mailboxes.AddressIndex.Get(currentRecipient.Address);
+        var mailboxId = await Mailboxes.AddressIndex.GetAsync(currentRecipient.Address);
         if (mailboxId == null)
         {
             if (SendMissingInternalRecipientsExternally || !Mailboxes.AddressIndex.Keys.Any(x => x.EndsWith('@' + currentRecipient.Domain)))
-            {
-                log = null;
-                return true;
-            }
+                return (true, null);
             else
-            {
-                log = "Address not found.";
-                return false;
-            }    
+                return (false, "Address not found.");
         }
 
-        Mailboxes.Transaction(mailboxId, (ref Mailbox mailbox, ref List<IFileAction> actions) =>
+        await Mailboxes.TransactionAsync(mailboxId, t =>
         {
             ulong messageId = (ulong)DateTime.UtcNow.Ticks;
-            while (mailbox.Messages.ContainsKey(messageId))
+            while (t.Value.Messages.ContainsKey(messageId))
                 messageId++;
-            mailbox.Messages[messageId] = new(true, DateTime.UtcNow, mailGen, potentialMessageId);
-            mailbox.Folders["Inbox"].Add(messageId);
+            t.Value.Messages[messageId] = new(true, DateTime.UtcNow, mailGen, potentialMessageId);
+            t.Value.Folders["Inbox"].Add(messageId);
             if (mailGen.TextBody != null)
-                actions.Add(new SetFileAction($"{messageId}/text", path => File.WriteAllText(path, mailGen.TextBody)));
+                t.FileActions.Add(new SetFileAction($"{messageId}/text", path => File.WriteAllText(path, mailGen.TextBody)));
             if (mailGen.HtmlBody != null)
-                actions.Add(new SetFileAction($"{messageId}/html", path => File.WriteAllText(path, mailGen.HtmlBody)));
+                t.FileActions.Add(new SetFileAction($"{messageId}/html", path => File.WriteAllText(path, mailGen.HtmlBody)));
             int attachmentIndex = 0;
             foreach (var attachment in mailGen.Attachments)
             {
-                actions.Add(new SetFileAction($"{messageId}/{attachmentIndex}", path => File.WriteAllBytes(path, attachment.Bytes)));
+                t.FileActions.Add(new SetFileAction($"{messageId}/{attachmentIndex}", path => File.WriteAllBytes(path, attachment.Bytes)));
                 attachmentIndex++;
             }
         });
@@ -58,25 +51,29 @@ public partial class MailPlugin
                         if (kv.Value.Remove(listenerKKV.Key) && kv.Value.Count == 0)
                             IncomingListeners.Remove(kv.Key);
                 }
-        log = "Sent internally.";
-        return false;
+        return (false, "Sent internally.");
     }
 
-    public bool MailboxExists(ISessionContext context, IMailbox from, IMailbox to)
+    public Task<bool> MailboxExistsAsync(ISessionContext context, IMailbox from, IMailbox to)
     {
         //Option 1: check if any addresses with that host domain exist (so that spammers/attackers can't scan for what mailboxes exist for a given domain)
-        return Mailboxes.AddressIndex.Keys.Any(x => x.EndsWith('@' + to.Host));
+        return Task.FromResult(Mailboxes.AddressIndex.Keys.Any(x => x.EndsWith('@' + to.Host)));
 
         //Option 2: check if that exact recipient address exists
-        //return Mailboxes.AddressIndex.Get(from.AsAddress()) != null;
+        //return Task.FromResult(Mailboxes.AddressIndex.Get(from.AsAddress()) != null);
     }
 
-    public SmtpResponse HandleMail(ISessionContext context, MimeMessage message, MailConnectionData connectionData)
+    public async Task<SmtpResponse> HandleMailAsync(ISessionContext context, MimeMessage message, MailConnectionData connectionData)
     {
         MailboxAddress? from = message.From.Mailboxes.FirstOrDefault();
         if (from == null || !message.To.Mailboxes.Any())
             return SmtpResponse.SyntaxError;
-        var mailboxes = message.To.Mailboxes.Union(message.Cc.Mailboxes).Union(message.Bcc.Mailboxes).Where(x => Mailboxes.AddressIndex.Get(x.Address) != null).ToList();
+        
+        List<MailboxAddress> mailboxes = [];
+        foreach (var m in message.To.Mailboxes.Union(message.Cc.Mailboxes).Union(message.Bcc.Mailboxes))
+            if (await Mailboxes.AddressIndex.GetAsync(m.Address) != null)
+                mailboxes.Add(m);
+        
         if (mailboxes.Count != 0)
         {
             List<string> log = [];
@@ -94,25 +91,25 @@ public partial class MailPlugin
             MailMessage mail = new(true, DateTime.UtcNow, message, attachments, authResult, log);
             foreach (string toAddress in mailboxes.Select(x => x.Address))
             {
-                var mailboxId = Mailboxes.AddressIndex.Get(toAddress);
+                var mailboxId = await Mailboxes.AddressIndex.GetAsync(toAddress);
                 if (mailboxId == null)
                     continue;
                 
                 List<string> tempFiles = [];
                 try
                 {
-                    Mailboxes.Transaction(mailboxId, (ref Mailbox mailbox, ref List<IFileAction> actions) =>
+                    await Mailboxes.TransactionAsync(mailboxId, t =>
                     {
                         ulong messageId = (ulong)mail.TimestampUtc.Ticks;
-                        while (mailbox.Messages.ContainsKey(messageId))
+                        while (t.Value.Messages.ContainsKey(messageId))
                             messageId++;
-                        mailbox.Messages[messageId] = mail;
-                        mailbox.Folders[mailbox.AuthRequirements.SatisfiedBy(authResult) ? "Inbox" : "Spam"].Add(messageId);
+                        t.Value.Messages[messageId] = mail;
+                        t.Value.Folders[t.Value.AuthRequirements.SatisfiedBy(authResult) ? "Inbox" : "Spam"].Add(messageId);
                         
                         if (message.TextBody != null)
-                            actions.Add(new SetFileAction($"{messageId}/text", path => File.WriteAllText(path, message.TextBody)));
+                            t.FileActions.Add(new SetFileAction($"{messageId}/text", path => File.WriteAllText(path, message.TextBody)));
                         if (message.HtmlBody != null)
-                            actions.Add(new SetFileAction($"{messageId}/html", path => File.WriteAllText(path, message.HtmlBody)));
+                            t.FileActions.Add(new SetFileAction($"{messageId}/html", path => File.WriteAllText(path, message.HtmlBody)));
                         int attachmentIndex = 0;
                         foreach (var attachment in message.Attachments)
                         {
@@ -133,7 +130,7 @@ public partial class MailPlugin
                             }
                             stream.Flush();
                             stream.Close();
-                            actions.Add(new SetFileAction($"{messageId}/{attachmentIndex}", path => File.Move(temp, path)));
+                            t.FileActions.Add(new SetFileAction($"{messageId}/{attachmentIndex}", path => File.Move(temp, path)));
                             attachmentIndex++;
                         }
                     });

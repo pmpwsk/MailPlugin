@@ -5,7 +5,7 @@ namespace uwap.WebFramework.Plugins;
 
 public partial class MailPlugin
 {
-    public Task HandleMove(Request req)
+    public async Task HandleMove(Request req)
     {
         switch (req.Path)
         {
@@ -33,25 +33,24 @@ public partial class MailPlugin
 
             case "/move/do":
             { POST(req);
-                if (InvalidMailboxOrMessageOrFolder(req, out var readMailbox, out _, out var messageId, out _, out var folderName))
+                if (InvalidMailboxOrMessageOrFolder(req, out var mailbox, out _, out var messageId, out _, out var folderName))
                     break;
                 if (!req.Query.TryGetValue("new", out var newFolderName) || folderName == "Sent" || newFolderName == "Sent" || folderName == newFolderName)
                     throw new BadRequestSignal();
                 
-                Mailboxes.Transaction(readMailbox.Id, (ref Mailbox mailbox) =>
-                {
-                    if (!mailbox.Folders.TryGetValue(folderName, out var folder)
-                        || !mailbox.Folders.TryGetValue(newFolderName, out var newFolder))
-                        throw new NotFoundSignal();
-                    
-                    if (mailbox.Messages.TryGetValue(messageId, out var message))
-                        if (newFolderName == "Trash")
-                            message.Deleted = DateTime.UtcNow;
-                        else message.Deleted = null;
-                    
-                    folder.Remove(messageId);
-                    newFolder.Add(messageId);
-                });
+                await using var t = Mailboxes.StartModifying(ref mailbox);
+                
+                if (!mailbox.Folders.TryGetValue(folderName, out var folder)
+                    || !mailbox.Folders.TryGetValue(newFolderName, out var newFolder))
+                    throw new NotFoundSignal();
+                
+                if (mailbox.Messages.TryGetValue(messageId, out var message))
+                    if (newFolderName == "Trash")
+                        message.Deleted = DateTime.UtcNow;
+                    else message.Deleted = null;
+                
+                folder.Remove(messageId);
+                newFolder.Add(messageId);
             } break;
             
 
@@ -63,7 +62,5 @@ public partial class MailPlugin
                 req.Status = 404;
                 break;
         }
-
-        return Task.CompletedTask;
     }
 }

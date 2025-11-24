@@ -20,7 +20,7 @@ public partial class MailPlugin
                     page.Navigation.Add(new Button("Back", "/", "right"));
                     page.Title = "Mailboxes";
                     bool isAdmin = req.IsAdmin;
-                    var mailboxes = EnumerateAccessibleMailboxes(req).ToList();
+                    var mailboxes = await ListAccessibleMailboxesAsync(req);
 
                     if (isAdmin || mailboxes.Count != 1)
                     {
@@ -51,7 +51,8 @@ public partial class MailPlugin
                     else req.Redirect($".?mailbox={mailboxes.First().Id}");
                     break;
                 }
-                if (!Mailboxes.TryGetValue(mailboxId, out Mailbox? mailbox))
+                var mailbox = await Mailboxes.GetByIdNullableAsync(mailboxId);
+                if (mailbox == null)
                 {
                     //mailbox doesn't exist
                     page.Navigation.Add(new Button("Back", ".", "right"));
@@ -69,7 +70,7 @@ public partial class MailPlugin
                 if (!req.Query.TryGetValue("folder", out var folderName))
                 {/////
                     //list folders in the mailbox (inbox, sent, recycle bin, spam are pinned)
-                    var mailboxes = EnumerateAccessibleMailboxes(req).ToList();
+                    var mailboxes = await ListAccessibleMailboxesAsync(req);
                     page.Navigation.Add(new Button("Back", mailboxes.Count == 1 && !req.IsAdmin ? "/" : ".", "right"));
                     page.Scripts.Add(IncomingScript(req, LastInboxMessageId(mailbox)));
                     page.Title = $"Mail ({mailbox.Address})";
@@ -161,9 +162,9 @@ public partial class MailPlugin
                     //show message in a certain way (another query)
                     if (message.Unread)
                     {
-                        Mailboxes.TransactionIgnoreNull(mailbox.Id, (ref Mailbox mb) =>
+                        await Mailboxes.TransactionIgnoreNullAsync(mailbox.Id, t =>
                         {
-                            if (mb.Messages.TryGetValue(messageId, out var m))
+                            if (t.Value.Messages.TryGetValue(messageId, out var m))
                                 m.Unread = false;
                         });
                         message.Unread = false;
@@ -316,21 +317,21 @@ public partial class MailPlugin
             { POST(req);
                 if (InvalidMailboxOrMessageOrFolder(req, out var mailbox, out _, out var messageId, out _, out var folderName))
                     break;
-                Mailboxes.Transaction(mailbox.Id, (ref Mailbox value, ref List<IFileAction> actions) =>
+                
+                await using var t = Mailboxes.StartModifying(ref mailbox);
+                
+                if (folderName == "Trash")
                 {
-                    if (folderName == "Trash")
-                    {
-                        DeleteMessage(value, actions, messageId);
-                    }
-                    else
-                    {
-                        if (value.Messages.TryGetValue(messageId, out var message))
-                            message.Deleted = DateTime.UtcNow;
-                        if (value.Folders.TryGetValue(folderName, out var folder))
-                            folder.Remove(messageId);
-                        value.Folders["Trash"].Add(messageId);
-                    }
-                });
+                    DeleteMessage(mailbox, t.FileActions, messageId);
+                }
+                else
+                {
+                    if (mailbox.Messages.TryGetValue(messageId, out var message))
+                        message.Deleted = DateTime.UtcNow;
+                    if (mailbox.Folders.TryGetValue(folderName, out var folder))
+                        folder.Remove(messageId);
+                    mailbox.Folders["Trash"].Add(messageId);
+                }
                 await req.Write("ok");
             } break;
 
@@ -341,37 +342,34 @@ public partial class MailPlugin
                 if (folderName == "Sent")
                     throw new BadRequestSignal();
                 
-                Mailboxes.Transaction(mailbox.Id, (ref Mailbox value) =>
-                {
-                    if (value.Messages.TryGetValue(messageId, out var message))
+                await using (Mailboxes.StartModifying(ref mailbox))
+                    if (mailbox.Messages.TryGetValue(messageId, out var message))
                         message.Unread = true;
-                });
             } break;
 
             case "/reply":
             { POST(req);
-                if (InvalidMailboxOrMessageOrFolder(req, out var readMailbox, out _, out var messageId, out _, out var folderName))
+                if (InvalidMailboxOrMessageOrFolder(req, out var mailbox, out _, out var messageId, out _, out var folderName))
                     break;
                 if (folderName == "Sent")
                     throw new BadRequestSignal();
                 
-                Mailboxes.Transaction(readMailbox.Id, (ref Mailbox mailbox, ref List<IFileAction> actions) =>
-                {
-                    var message = mailbox.Messages[messageId];
-                    
-                    string? text = mailbox.GetFileText($"{messageId}/html") ?? mailbox.GetFileText($"{messageId}/text")?.Map(t => AddHTML(t.HtmlSafe()));
-                    text = text != null ? $"\n\n\n# Original message:\n# From: {message.From.FullString}\n# Time: {DateTimeString(message.TimestampUtc)} UTC\n\n\n{QuoteHTML(Before(text, "# Original message:").TrimEnd())}" : "";
+                await using var t = Mailboxes.StartModifying(ref mailbox);
+                
+                var message = mailbox.Messages[messageId];
+                
+                string? text = mailbox.GetFileText($"{messageId}/html") ?? mailbox.GetFileText($"{messageId}/text")?.Map(text => AddHTML(text.HtmlSafe()));
+                text = text != null ? $"\n\n\n# Original message:\n# From: {message.From.FullString}\n# Time: {DateTimeString(message.TimestampUtc)} UTC\n\n\n{QuoteHTML(Before(text, "# Original message:").TrimEnd())}" : "";
 
-                    if (mailbox.Footer != null)
-                        text = "\n\n" + mailbox.Footer + text;
+                if (mailbox.Footer != null)
+                    text = "\n\n" + mailbox.Footer + text;
 
-                    string subject = message.Subject.Trim();
-                    while (subject.SplitAtFirst(':', out var subjectPrefix, out var realSubject) && subjectPrefix.All(char.IsLetter) && (subjectPrefix.Length == 2 || subjectPrefix.Length == 3) && realSubject.TrimStart() != "")
-                        subject = realSubject.TrimStart();
-                    string toAddress = (message.ReplyTo ?? message.From).Address;
-                    mailbox.Messages[0] = new(new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address), [new MailAddress(toAddress, mailbox.Contacts.TryGetValue(toAddress, out var contact) ? contact.Name : toAddress)], "Re: " + subject, message.MessageId);
-                    actions.Add(new SetFileAction("0/text", path => File.WriteAllText(path, text)));
-                });
+                string subject = message.Subject.Trim();
+                while (subject.SplitAtFirst(':', out var subjectPrefix, out var realSubject) && subjectPrefix.All(char.IsLetter) && (subjectPrefix.Length == 2 || subjectPrefix.Length == 3) && realSubject.TrimStart() != "")
+                    subject = realSubject.TrimStart();
+                string toAddress = (message.ReplyTo ?? message.From).Address;
+                mailbox.Messages[0] = new(new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address), [new MailAddress(toAddress, mailbox.Contacts.TryGetValue(toAddress, out var contact) ? contact.Name : toAddress)], "Re: " + subject, message.MessageId);
+                t.FileActions.Add(new SetFileAction("0/text", path => File.WriteAllText(path, text)));
             } break;
 
             case "/find":
@@ -396,8 +394,8 @@ public partial class MailPlugin
             // INCOMING MESSAGE EVENT
             case "/incoming-event":
             { GET(req);
-                req.KeepEventAliveCancelled.Register(RemoveIncomingListener);
-                var mailboxes = EnumerateAccessibleMailboxes(req).ToList();
+                await req.KeepEventAliveCancelled.RegisterAsync(RemoveIncomingListener);
+                var mailboxes = await ListAccessibleMailboxesAsync(req);
                 ulong actualLast, lastUnread;
                 ulong lastKnown = req.Query.TryGetValue("last", out ulong lk) ? lk : 0;
                 if (InvalidMailbox(req, out var mailbox))
