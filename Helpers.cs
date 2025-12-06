@@ -8,7 +8,7 @@ public partial class MailPlugin
     private static void CreatePage(Request req, string title, out Page page, out List<IPageElement> e)
     {
         req.ForceGET();
-        req.CreatePage(title, out page, out e);
+        Presets.CreatePage(req, title, out page, out e);
         req.ForceLogin();
         page.Head.Add($"<link rel=\"manifest\" href=\"{req.PluginPathPrefix}/manifest.json\" />");
         page.Favicon = $"{req.PluginPathPrefix}/icon.ico";
@@ -51,7 +51,7 @@ public partial class MailPlugin
 
     private static CustomScript IncomingScript(Request req, ulong last)
     {
-        string query = req.Context.Request.QueryString.HasValue ? req.Context.Request.QueryString.Value ?? "" : "";
+        string query = req.QueryString;
         if (query == "")
             query = "?";
         else query += "&";
@@ -61,7 +61,7 @@ public partial class MailPlugin
 
     private static string PathWithoutQueries(string path, Request req, params string[] queries)
     {
-        string query = string.Join('&', req.Context.Request.Query.Where(x => !queries.Contains(x.Key)).Select(x => $"{x.Key}={(x.Key == "folder" ? HttpUtility.UrlEncode(x.Value) : x.Value)}"));
+        string query = string.Join('&', req.Query.ListAll().Where(x => !queries.Contains(x.Key)).Select(x => $"{x.Key}={(x.Key == "folder" ? HttpUtility.UrlEncode(x.Value) : x.Value)}"));
         if (query == "")
             return path;
         else return $"{path}?{query}";

@@ -1,21 +1,21 @@
 ﻿using System.Web;
 using uwap.WebFramework.Elements;
+using uwap.WebFramework.Responses;
 
 namespace uwap.WebFramework.Plugins;
 
 public partial class MailPlugin
 {
-    public async Task HandleMove(Request req)
+    public async Task<IResponse> HandleMove(Request req)
     {
         switch (req.Path)
         {
             // MOVE MAIL
             case "/move":
             { CreatePage(req, "Move", out var page, out var e);
-                if (InvalidMailboxOrMessageOrFolder(req, out var mailbox, out var message, out var messageId, out _, out var folderName))
-                    break;
+                var (mailbox, messageId, message, folderName, _) = await ValidateMailboxAndMessageAndFolderAsync(req);
                 if (folderName == "Sent")
-                    throw new BadRequestSignal();
+                    return StatusResponse.BadRequest;
                 page.Navigation.Add(new Button("Back", $".?mailbox={mailbox.Id}&folder={folderName}&message={messageId}", "right"));
                 page.Scripts.Add(Presets.SendRequestScript);
                 page.Scripts.Add(new Script("query.js"));
@@ -29,20 +29,20 @@ public partial class MailPlugin
                         e.Add(new ContainerElement(f, "", "green"));
                     else
                         e.Add(new ButtonElementJS(f, null, $"Move('{HttpUtility.UrlEncode(f)}')"));
-            } break;
+                return new LegacyPageResponse(page, req);
+            }
 
             case "/move/do":
             { POST(req);
-                if (InvalidMailboxOrMessageOrFolder(req, out var mailbox, out _, out var messageId, out _, out var folderName))
-                    break;
+                var (mailbox, messageId, _, folderName, _) = await ValidateMailboxAndMessageAndFolderAsync(req);
                 if (!req.Query.TryGetValue("new", out var newFolderName) || folderName == "Sent" || newFolderName == "Sent" || folderName == newFolderName)
-                    throw new BadRequestSignal();
+                    return StatusResponse.BadRequest;
                 
                 await using var t = Mailboxes.StartModifying(ref mailbox);
                 
                 if (!mailbox.Folders.TryGetValue(folderName, out var folder)
                     || !mailbox.Folders.TryGetValue(newFolderName, out var newFolder))
-                    throw new NotFoundSignal();
+                    return StatusResponse.NotFound;
                 
                 if (mailbox.Messages.TryGetValue(messageId, out var message))
                     if (newFolderName == "Trash")
@@ -51,16 +51,15 @@ public partial class MailPlugin
                 
                 folder.Remove(messageId);
                 newFolder.Add(messageId);
-            } break;
+                return StatusResponse.Success;
+            }
             
 
 
 
             // 404
             default:
-                req.CreatePage("Error");
-                req.Status = 404;
-                break;
+                return StatusResponse.NotFound;
         }
     }
 }

@@ -1,29 +1,17 @@
-﻿namespace uwap.WebFramework.Plugins;
+﻿using uwap.WebFramework.Responses;
+
+namespace uwap.WebFramework.Plugins;
 
 public partial class MailPlugin : Plugin
 {
-    public override async Task Handle(Request req)
-    {
-        switch (Parsers.GetFirstSegment(req.Path, out _))
+    public override Task<IResponse> HandleAsync(Request req)
+        => Parsers.GetFirstSegment(req.Path, out _) switch
         {
-            case "forward":
-                await HandleForward(req);
-                break;
-            case "manage":
-                await HandleManage(req);
-                break;
-            case "move":
-                await HandleMove(req);
-                break;
-            case "send":
-                await HandleSend(req);
-                break;
-            case "settings":
-                await HandleSettings(req);
-                break;
-            default:
-                await HandleOther(req);
-                break;
-        }
-    }
+            "forward" => HandleForward(req),
+            "manage" => HandleManage(req),
+            "move" => HandleMove(req),
+            "send" => HandleSend(req),
+            "settings" => HandleSettings(req),
+            _ => HandleOther(req)
+        };
 }

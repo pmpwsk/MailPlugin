@@ -1,6 +1,7 @@
 ﻿using System.Web;
 using uwap.WebFramework.Accounts;
 using uwap.WebFramework.Elements;
+using uwap.WebFramework.Responses;
 using uwap.WebFramework.Tools;
 using static uwap.WebFramework.Mail.MailAuth;
 
@@ -8,15 +9,14 @@ namespace uwap.WebFramework.Plugins;
 
 public partial class MailPlugin
 {
-    public async Task HandleSettings(Request req)
+    public async Task<IResponse> HandleSettings(Request req)
     {
         switch (req.Path)
         {
             // SETTINGS
             case "/settings":
             { CreatePage(req, "Mail settings", out var page, out var e);
-                if (InvalidMailbox(req, out var mailbox))
-                    break;
+                var mailbox = await ValidateMailboxAsync(req);
                 page.Navigation.Add(new Button("Back", $".?mailbox={mailbox.Id}", "right"));
                 page.Scripts.Add(Presets.SendRequestScript);
                 page.Scripts.Add(new Script("query.js"));
@@ -33,44 +33,42 @@ public partial class MailPlugin
                 e.Add(new ContainerElement("Name", new TextBox("Enter a name...", mailbox.Name, "name-input", onEnter: "SaveName()", onInput: "NameChanged()")) { Button = new ButtonJS("Saved!", "SaveName()", id: "save-name") });
                 e.Add(new ContainerElement("Footer", new TextArea("Enter a footer...", mailbox.Footer, "footer-input", 5, onInput: "FooterChanged()")) { Button = new ButtonJS("Saved!", "SaveFooter()", id: "save-footer") });
                 e.Add(new ContainerElement("External images", new Checkbox("Show external image links", "external-images", mailbox.ShowExternalImageLinks) { OnChange = "SaveExternalImages()" }) { Button = new ButtonJS("Saved!", "SaveExternalImages()", id: "save-external-images")});
-            } break;
+                return new LegacyPageResponse(page, req);
+            }
 
             case "/settings/set-name":
             { POST(req);
-                if (InvalidMailbox(req, out var mailbox))
-                    break;
-                if (!req.Query.TryGetValue("name", out var name))
-                    throw new BadRequestSignal();
+                var mailbox = await ValidateMailboxAsync(req);
+                var name = req.Query.GetOrThrow("name");
                 if (name == "")
                     name = null;
                 
                 await using (Mailboxes.StartModifying(ref mailbox))
                     mailbox.Name = name;
-            } break;
+                return StatusResponse.Success;
+            }
 
             case "/settings/set-footer":
             { POST(req);
-                if (InvalidMailbox(req, out var mailbox))
-                    break;
-                if (!req.Query.TryGetValue("footer", out var footer))
-                    throw new BadRequestSignal();
+                var mailbox = await ValidateMailboxAsync(req);
+                var footer = req.Query.GetOrThrow("footer");
                 if (footer == "")
                     footer = null;
                 
                 await using (Mailboxes.StartModifying(ref mailbox))
                     mailbox.Footer = footer;
-            } break;
+                return StatusResponse.Success;
+            }
 
             case "/settings/set-external-images":
             { POST(req);
-                if (InvalidMailbox(req, out var mailbox))
-                    break;
-                if (!req.Query.TryGetValue("value", out bool value))
-                    throw new NotFoundSignal();
+                var mailbox = await ValidateMailboxAsync(req);
+                var value = req.Query.GetOrThrow<bool>("value");
                 
                 await using (Mailboxes.StartModifying(ref mailbox))
                     mailbox.ShowExternalImageLinks = value;
-            } break;
+                return StatusResponse.Success;
+            }
 
 
 
@@ -78,8 +76,7 @@ public partial class MailPlugin
             // SETTINGS > MAIL AUTHENTICATION
             case "/settings/auth":
             { CreatePage(req, "Mail authentication", out var page, out var e);
-                if (InvalidMailbox(req, out var mailbox))
-                    break;
+                var mailbox = await ValidateMailboxAsync(req);
                 page.Navigation.Add(new Button("Back", $"../settings?mailbox={mailbox.Id}", "right"));
                 page.Title = "Mail authentication";
                 page.Scripts.Add(Presets.SendRequestScript);
@@ -135,12 +132,12 @@ public partial class MailPlugin
                         nameof(MailAuthVerdictDMARC.Pass))
                     { OnChange = "Changed()" }
                 ]));
-            } break;
+                return new LegacyPageResponse(page, req);
+            }
 
             case "/settings/auth/set":
             { POST(req);
-                if (InvalidMailbox(req, out var mailbox))
-                    break;
+                var mailbox = await ValidateMailboxAsync(req);
                 if (!(req.Query.TryGetValue("connection-secure", out string? connectionSecureS) && req.Query.TryGetValue("connection-ptr", out string? connectionPtrS)
                     && req.Query.TryGetValue("spf-min", out string? spfMinS)
                     && req.Query.TryGetValue("dkim-min", out string? dkimMinS)
@@ -149,7 +146,7 @@ public partial class MailPlugin
                     && Enum.TryParse<MailAuthVerdictSPF>(spfMinS, out var spfMin)
                     && Enum.TryParse<MailAuthVerdictDKIM>(dkimMinS, out var dkimMin)
                     && bool.TryParse(dmarcEnoughS, out bool dmarcEnough) && Enum.TryParse<MailAuthVerdictDMARC>(dmarcMinS, out var dmarcMin)))
-                    throw new BadRequestSignal();
+                    return StatusResponse.BadRequest;
                 
                 await using (Mailboxes.StartModifying(ref mailbox))
                 {
@@ -161,7 +158,8 @@ public partial class MailPlugin
                     ar.SatisfiedByDMARC = dmarcEnough;
                     ar.DMARC = dmarcMin;
                 }
-            } break;
+                return StatusResponse.Success;
+            }
 
 
 
@@ -169,8 +167,7 @@ public partial class MailPlugin
             // SETTINGS > CONTACTS
             case "/settings/contacts":
             { CreatePage(req, "Mail", out var page, out var e);
-                if (InvalidMailbox(req, out var mailbox))
-                    break;
+                var mailbox = await ValidateMailboxAsync(req);
                 page.Scripts.Add(Presets.SendRequestScript);
                 page.Scripts.Add(new Script("../query.js"));
                 page.Sidebar.Add(new ButtonElement("Mailboxes:", null, ".."));
@@ -181,7 +178,7 @@ public partial class MailPlugin
                 {
                     //edit
                     if (!mailbox.Contacts.TryGetValue(email, out var contact))
-                        throw new NotFoundSignal();
+                        return StatusResponse.NotFound;
                     page.Title = "Edit contact";
                     page.Navigation.Add(new Button("Back", $"contacts?mailbox={mailbox.Id}", "right"));
                     page.Scripts.Add(new Script("contacts-edit.js"));
@@ -215,34 +212,32 @@ public partial class MailPlugin
                     foreach (var contactKV in search.Sort(x => !x.Value.Favorite, x => x.Value.Name))
                         e.Add(new ButtonElement($"{(contactKV.Value.Favorite ? "[*] " : "")}{contactKV.Value.Name}", contactKV.Key, $"contacts?mailbox={mailbox.Id}&email={HttpUtility.UrlEncode(contactKV.Key)}"));
                 }
-            } break;
+                return new LegacyPageResponse(page, req);
+            }
 
             case "/settings/contacts/set":
             { POST(req);
-                if (InvalidMailbox(req, out var mailbox))
-                    break;
-                if (!(req.Query.TryGetValue("email", out string? email)
-                    && req.Query.TryGetValue("name", out string? name)
-                    && req.Query.TryGetValue("favorite", out string? favoriteS)
-                    && bool.TryParse(favoriteS, out bool favorite)))
-                    throw new BadRequestSignal();
+                var mailbox = await ValidateMailboxAsync(req);
+                var email = req.Query.GetOrThrow("email");
+                var name = req.Query.GetOrThrow("name");
+                var favorite = req.Query.GetOrThrow<bool>("favorite");
                 if (!AccountManager.CheckMailAddressFormat(email))
-                    throw new HttpStatusSignal(418);
+                    return StatusResponse.Teapot;
                 
                 await using (Mailboxes.StartModifying(ref mailbox))
                     mailbox.Contacts[email] = new(name, favorite);
-            } break;
+                return StatusResponse.Success;
+            }
 
             case "/settings/contacts/delete":
             { POST(req);
-                if (InvalidMailbox(req, out var mailbox))
-                    break;
-                if (!req.Query.TryGetValue("email", out string? email))
-                    throw new BadRequestSignal();
+                var mailbox = await ValidateMailboxAsync(req);
+                var email = req.Query.GetOrThrow("email");
                 
                 await using (Mailboxes.StartModifying(ref mailbox))
                     mailbox.Contacts.Remove(email);
-            } break;
+                return StatusResponse.Success;
+            }
 
 
 
@@ -250,8 +245,7 @@ public partial class MailPlugin
             // SETTINGS > FOLDERS
             case "/settings/folders":
             { CreatePage(req, "Mail folders", out var page, out var e);
-                if (InvalidMailbox(req, out var mailbox))
-                    break;
+                var mailbox = await ValidateMailboxAsync(req);
                 page.Navigation.Add(new Button("Back", $"../settings?mailbox={mailbox.Id}", "right"));
                 page.Scripts.Add(Presets.SendRequestScript);
                 page.Scripts.Add(new Script("../query.js"));
@@ -271,25 +265,24 @@ public partial class MailPlugin
                             Button = new ButtonJS("Delete", $"Delete('{HttpUtility.UrlEncode(f)}', '{f.ToId()}')",
                                 "red", id: f.ToId())
                         });
-            } break;
+                return new LegacyPageResponse(page, req);
+            }
 
             case "/settings/folders/create":
             { POST(req);
-                if (InvalidMailbox(req, out var mailbox))
-                    break;
-                if (!req.Query.TryGetValue("name", out var name))
-                    throw new BadRequestSignal();
+                var mailbox = await ValidateMailboxAsync(req);
+                var name = req.Query.GetOrThrow("name");
                 if (mailbox.Folders.ContainsKey(name))
-                    throw new HttpStatusSignal(409);
+                    return new StatusResponse(409);
                 
                 await using (Mailboxes.StartModifying(ref mailbox))
                     mailbox.Folders[name] = [];
-            } break;
+                return StatusResponse.Success;
+            }
 
             case "/settings/folders/delete":
             { POST(req);
-                if (InvalidMailboxOrFolder(req, out var mailbox, out _, out var folderName))
-                    break;
+                var (mailbox, folderName, _) = await ValidateMailboxAndFolderAsync(req);
                 
                 await using var t = Mailboxes.StartModifying(ref mailbox);
                 foreach (var messageId in mailbox.Folders[folderName])
@@ -303,16 +296,15 @@ public partial class MailPlugin
                     mailbox.Messages.Remove(messageId);
                 }
                 mailbox.Folders.Remove(folderName);
-            } break;
+                return StatusResponse.Success;
+            }
             
 
 
 
             // 404
             default:
-                req.CreatePage("Error");
-                req.Status = 404;
-                break;
+                return StatusResponse.NotFound;
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using uwap.WebFramework.Database;
 using uwap.WebFramework.Elements;
+using uwap.WebFramework.Responses;
 
 namespace uwap.WebFramework.Plugins;
 
@@ -31,12 +32,12 @@ public partial class MailPlugin
     /// <summary>
     /// first key is the mailbox to be listened on, second key is the listening request, value is true if "refresh" should be sent and false if "icon" should be sent
     /// </summary>
-    private readonly Dictionary<string, Dictionary<Request, bool>> IncomingListeners = [];
+    private readonly Dictionary<string, Dictionary<EventResponse, bool>> IncomingListeners = [];
 
-    private Task RemoveIncomingListener(Request req)
+    private Task RemoveIncomingListener(Request req, EventResponse response)
     {
         foreach (var kv in IncomingListeners)
-            if (kv.Value.Remove(req) && kv.Value.Count == 0)
+            if (kv.Value.Remove(response) && kv.Value.Count == 0)
                 IncomingListeners.Remove(kv.Key);
         return Task.CompletedTask;
     }
@@ -111,146 +112,62 @@ public partial class MailPlugin
         foreach (var f in folders.Where(pair => !DefaultFolders.Contains(pair.Key)).OrderBy(x => x.Key))
             yield return f;
     }
-
-    private bool InvalidMailbox(Request req, [MaybeNullWhen(true)] out Mailbox mailbox)
+    
+    private async Task<Mailbox?> TryGetMailboxAsync(Request req)
     {
-        if (!req.Query.TryGetValue("mailbox", out string? mailboxId))
-        {
-            req.Status = 400;
-            mailbox = null;
-            return true;
-        }
-        mailbox = Mailboxes.GetByIdNullableAsync(mailboxId).GetAwaiter().GetResult();
-        if (mailbox == null)
-        {
-            if (req.Page is Page page)
-                page.Elements.Add(new LargeContainerElement("Error", "This mailbox doesn't exist!", "red"));
-            else req.Status = 404;
-            mailbox = null;
-            return true;
-        }
+        if (req.Query.ContainsKey("mailbox"))
+            return await ValidateMailboxAsync(req);
+        return null;
+    }
+
+    private async Task<Mailbox> ValidateMailboxAsync(Request req)
+    {
+        var mailboxId = req.Query.GetOrThrow("mailbox");
+        var mailbox = await Mailboxes.GetByIdAsync(mailboxId);
         if ((!mailbox.AllowedUserIds.TryGetValue(req.UserTable.Name, out var allowedUserIds)) || !allowedUserIds.Contains(req.User.Id))
-        {
-            if (req.Page is Page page)
-                page.Elements.Add(new LargeContainerElement("Error", "You don't have access to this mailbox!", "red"));
-            else req.Status = 403;
-            mailbox = null;
-            return true;
-        }
-        return false;
+            throw new ForcedResponse(StatusResponse.Forbidden);
+        return mailbox;
     }
 
-    private static bool InvalidMessage(Request req, [MaybeNullWhen(true)] out MailMessage message, out ulong messageId, Mailbox mailbox, bool acceptDraft = false)
+    private static (ulong MessageId, MailMessage Message) ValidateMessage(Request req, Mailbox mailbox, bool acceptDraft = false)
     {
-        if (!req.Query.TryGetValue("message", out var messageIdString))
-        {
-            req.Status = 400;
-            message = null;
-            messageId = 0UL;
-            return true;
-        }
-        if (!ulong.TryParse(messageIdString, out messageId) || (messageId == 0 && !acceptDraft) || !mailbox.Messages.TryGetValue(messageId, out message))
-        {
-            if (req.Page is Page page)
-                page.Elements.Add(new LargeContainerElement("Error", "This message doesn't exist!", "red"));
-            else req.Status = 404;
-            message = null;
-            messageId = 0UL;
-            return true;
-        }
-        return false;
+        var messageIdString = req.Query.GetOrThrow("message");
+        if (!ulong.TryParse(messageIdString, out var messageId) || (messageId == 0 && !acceptDraft) || !mailbox.Messages.TryGetValue(messageId, out var message))
+            throw new ForcedResponse(StatusResponse.NotFound);
+        return (messageId, message);
     }
 
-    private static bool InvalidFolder(Request req, [MaybeNullWhen(true)] out SortedSet<ulong> folder, [MaybeNullWhen(true)] out string folderName, Mailbox mailbox, ulong? messageId)
+    private static (string FolderName, SortedSet<ulong> Folder) ValidateFolder(Request req, Mailbox mailbox, ulong? messageId)
     {
-        if (!req.Query.TryGetValue("folder", out folderName))
-        {
-            req.Status = 400;
-            folder = null;
-            folderName = null;
-            return true;
-        }
-        if (!mailbox.Folders.TryGetValue(folderName, out folder))
-        {
-            if (req.Page is Page page)
-                page.Elements.Add(new LargeContainerElement("Error", "This folder doesn't exist!", "red"));
-            else req.Status = 404;
-            folder = null;
-            folderName = null;
-            return true;
-        }
-        if (messageId != null && !folder.Contains(messageId.Value))
-        {
-            if (req.Page is Page page)
-                page.Elements.Add(new LargeContainerElement("Error", "This message isn't part of the requested folder!", "red"));
-            else req.Status = 404;
-            folder = null;
-            folderName = null;
-            return true;
-        }
-        return false;
+        var folderName = req.Query.GetOrThrow("folder");
+        if (!mailbox.Folders.TryGetValue(folderName, out var folder) || messageId != null && !folder.Contains(messageId.Value))
+            throw new ForcedResponse(StatusResponse.NotFound);
+        return (folderName, folder);
     }
 
-    private bool InvalidMailboxOrMessage(Request req, [MaybeNullWhen(true)] out Mailbox mailbox, [MaybeNullWhen(true)] out MailMessage message, out ulong messageId, bool acceptDraft = false)
+    private async Task<(Mailbox Mailbox, ulong MessageId, MailMessage Message)> ValidateMailboxAndMessageAsync(Request req, bool acceptDraft = false)
     {
-        if (InvalidMailbox(req, out mailbox))
-        {
-            message = null;
-            messageId = 0UL;
-            return true;
-        }
-        if (InvalidMessage(req, out message, out messageId, mailbox, acceptDraft))
-        {
-            mailbox = null;
-            return true;
-        }
-        return false;
+        var mailbox = await ValidateMailboxAsync(req);
+        var (messageId, message) = ValidateMessage(req, mailbox, acceptDraft);
+        return (mailbox, messageId, message);
     }
 
-    private bool InvalidMailboxOrFolder(Request req, [MaybeNullWhen(true)] out Mailbox mailbox, [MaybeNullWhen(true)] out SortedSet<ulong> folder, [MaybeNullWhen(true)] out string folderName)
+    private async Task<(Mailbox Mailbox, string FolderName, SortedSet<ulong> Folder)> ValidateMailboxAndFolderAsync(Request req)
     {
-        if (InvalidMailbox(req, out mailbox))
-        {
-            folder = null;
-            folderName = null;
-            return true;
-        }
-        if (InvalidFolder(req, out folder, out folderName, mailbox, null))
-        {
-            mailbox = null;
-            return true;
-        }
-        return false;
+        var mailbox = await ValidateMailboxAsync(req);
+        var (folderName, folder) = ValidateFolder(req, mailbox, null);
+        return (mailbox, folderName, folder);
     }
 
-    private bool InvalidMailboxOrMessageOrFolder(Request req, [MaybeNullWhen(true)] out Mailbox mailbox, [MaybeNullWhen(true)] out MailMessage message, out ulong messageId, [MaybeNullWhen(true)] out SortedSet<ulong> folder, [MaybeNullWhen(true)] out string folderName, bool acceptDraft = false)
+    private async Task<(Mailbox Mailbox, ulong MessageId, MailMessage Message, string FolderName, SortedSet<ulong> Folder)> ValidateMailboxAndMessageAndFolderAsync(Request req, bool acceptDraft = false)
     {
-        if (InvalidMailbox(req, out mailbox))
-        {
-            message = null;
-            messageId = 0UL;
-            folder = null;
-            folderName = null;
-            return true;
-        }
-        if (InvalidMessage(req, out message, out messageId, mailbox, acceptDraft))
-        {
-            mailbox = null;
-            folder = null;
-            folderName = null;
-            return true;
-        }
-        if (InvalidFolder(req, out folder, out folderName, mailbox, messageId))
-        {
-            mailbox = null;
-            message = null;
-            messageId = 0UL;
-            return true;
-        }
-        return false;
+        var mailbox = await ValidateMailboxAsync(req);
+        var (messageId, message) = ValidateMessage(req, mailbox, acceptDraft);
+        var (folderName, folder) = ValidateFolder(req, mailbox, messageId);
+        return (mailbox, messageId, message, folderName, folder);
     }
     
-    private void DeleteMessage(Mailbox mailbox, List<IFileAction> fileActions, ulong messageId)
+    private static void DeleteMessage(Mailbox mailbox, List<IFileAction> fileActions, ulong messageId)
     {
         mailbox.Messages.Remove(messageId);
         foreach (var (_, folder) in mailbox.Folders)

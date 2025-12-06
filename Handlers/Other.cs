@@ -1,12 +1,13 @@
 ﻿using System.Web;
 using uwap.WebFramework.Database;
 using uwap.WebFramework.Elements;
+using uwap.WebFramework.Responses;
 
 namespace uwap.WebFramework.Plugins;
 
 public partial class MailPlugin
 {
-    public async Task HandleOther(Request req)
+    public async Task<IResponse> HandleOther(Request req)
     {
         switch (req.Path)
         {
@@ -48,8 +49,9 @@ public partial class MailPlugin
                             page.AddSupportButton(req);
                         }
                     }
-                    else req.Redirect($".?mailbox={mailboxes.First().Id}");
-                    break;
+                    else
+                        return new RedirectResponse($".?mailbox={mailboxes.First().Id}");
+                    return new LegacyPageResponse(page, req);
                 }
                 var mailbox = await Mailboxes.GetByIdNullableAsync(mailboxId);
                 if (mailbox == null)
@@ -57,14 +59,14 @@ public partial class MailPlugin
                     //mailbox doesn't exist
                     page.Navigation.Add(new Button("Back", ".", "right"));
                     e.Add(new LargeContainerElement("Error", "This mailbox doesn't exist!", "red"));
-                    break;
+                    return new LegacyPageResponse(page, req);
                 }
                 if ((!mailbox.AllowedUserIds.TryGetValue(req.UserTable.Name, out var allowedUserIds)) || !allowedUserIds.Contains(req.User.Id))
                 {
                     //user doesn't have access to this mailbox
                     page.Navigation.Add(new Button("Back", ".", "right"));
                     e.Add(new LargeContainerElement("Error", "You don't have access to this mailbox!", "red"));
-                    break;
+                    return new LegacyPageResponse(page, req);
                 }
 
                 if (!req.Query.TryGetValue("folder", out var folderName))
@@ -97,14 +99,14 @@ public partial class MailPlugin
                     }
                     if (anyUnread)
                         page.Favicon = $"{req.PluginPathPrefix}/icon-red.ico";
-                    break;
+                    return new LegacyPageResponse(page, req);
                 }
                 if (!mailbox.Folders.TryGetValue(folderName, out var folder))
                 {
                     //folder doesn't exist
                     page.Navigation.Add(new Button("Back", ".", "right"));
                     e.Add(new LargeContainerElement("Error", "This folder doesn't exist!", "red"));
-                    break;
+                    return new LegacyPageResponse(page, req);
                 }
 
                 if (!req.Query.TryGetValue("message", out var messageIdString))
@@ -143,19 +145,19 @@ public partial class MailPlugin
                     {
                         e.Add(new ContainerElement("No messages!", "", "red"));
                     }
-                    break;
+                    return new LegacyPageResponse(page, req);
                 }
                 if ((!ulong.TryParse(messageIdString, out ulong messageId)) || messageId == 0 || !mailbox.Messages.TryGetValue(messageId, out var message))
                 {
                     //message id isn't valid or doesn't exist
                     page.Navigation.Add(new Button("Back", ".", "right"));
                     e.Add(new LargeContainerElement("Error", "This message doesn't exist!", "red"));
-                    break;
+                    return new LegacyPageResponse(page, req);
                 }
                 if (!folder.Contains(messageId))
                 {
                     //message isn't part of the folder, try to find the new folder and redirect
-                    req.Redirect($".?mailbox={mailboxId}&folder={HttpUtility.UrlEncode(mailbox.Folders.First(x => x.Value.Contains(messageId)).Key)}&message={messageIdString}");
+                    return new RedirectResponse($".?mailbox={mailboxId}&folder={HttpUtility.UrlEncode(mailbox.Folders.First(x => x.Value.Contains(messageId)).Key)}&message={messageIdString}");
                 }
                 else
                 {/////
@@ -177,22 +179,21 @@ public partial class MailPlugin
                             case "text":
                                 {
                                     string code = mailbox.GetFileText($"{messageId}/text")?.HtmlSafe().Replace("\n", "<br/>") ?? "No text attached!";
-                                    req.Page = new RawHtmlCodePage(code);
-                                } break;
+                                    return new LegacyPageResponse(new RawHtmlCodePage(code), req);
+                                }
                             case "html":
                                 {
                                     string code = mailbox.GetFileText($"{messageId}/html")?.HtmlSafe().Replace("\n", "<br/>") ?? "No HTML attached!";
-                                    req.Page = new RawHtmlCodePage(code);
-                                } break;
+                                    return new LegacyPageResponse(new RawHtmlCodePage(code), req);
+                                }
                             case "load-html":
                                 if (mailbox.TryGetFilePath($"{messageId}/html", out var htmlPath))
-                                    req.Page = new RawHtmlFilePage(htmlPath);
-                                else req.Page = new RawHtmlCodePage("");
-                                break;
+                                    return new LegacyPageResponse(new RawHtmlFilePage(htmlPath), req);
+                                else
+                                    return new LegacyPageResponse(new RawHtmlCodePage(""), req);
                             default:
-                                throw new BadRequestSignal();
+                                return StatusResponse.BadRequest;
                         }
-                        break;
                     }
 
                     bool hasText = mailbox.ContainsFile($"{messageId}/text");
@@ -294,29 +295,28 @@ public partial class MailPlugin
                     if (views.Count != 0)
                         e.Add(new ContainerElement("View", new BulletList(views) {Unsafe = true}));
                 }
-            } break;
+                return new LegacyPageResponse(page, req);
+            }
 
             case "/attachment":
             { GET(req);
-                if (InvalidMailboxOrMessage(req, out var mailbox, out var message, out var messageId, true))
-                    break;
-                if ((!req.Query.TryGetValue("attachment", out string? attachmentIdString)) || (!int.TryParse(attachmentIdString, out var attachmentId)) || !req.Query.TryGetValue("download", out bool download))
-                    throw new BadRequestSignal();
+                var (mailbox, messageId, message) = await ValidateMailboxAndMessageAsync(req);
+                var attachmentId = req.Query.GetOrThrow<int>("attachment");
+                var download = req.Query.GetOrThrow<bool>("download");
                 if (attachmentId < 0 || attachmentId >= message.Attachments.Count)
-                    throw new NotFoundSignal();
+                    return StatusResponse.NotFound;
                 if (!mailbox.TryGetFilePath($"{messageId}/{attachmentId}", out var filePath))
-                    throw new ServerErrorSignal();
+                    return StatusResponse.ServerError;
                 MailAttachment attachment = message.Attachments[attachmentId];
-                req.Context.Response.ContentType = attachment.MimeType;
-                if (download)
-                    await req.WriteFileAsDownload(filePath, attachment.Name);
-                else await req.WriteFile(filePath);
-            } break;
+                if (download && attachment.Name != null)
+                    return new FileDownloadResponse(filePath, attachment.Name, null) { FixedType = attachment.MimeType };
+                else
+                    return new FileResponse(filePath, false, null) { FixedType = attachment.MimeType };
+            }
                 
             case "/delete-message":
             { POST(req);
-                if (InvalidMailboxOrMessageOrFolder(req, out var mailbox, out _, out var messageId, out _, out var folderName))
-                    break;
+                var (mailbox, messageId, _, folderName, _) = await ValidateMailboxAndMessageAndFolderAsync(req);
                 
                 await using var t = Mailboxes.StartModifying(ref mailbox);
                 
@@ -332,27 +332,26 @@ public partial class MailPlugin
                         folder.Remove(messageId);
                     mailbox.Folders["Trash"].Add(messageId);
                 }
-                await req.Write("ok");
-            } break;
+                return new TextResponse("ok");
+            }
 
             case "/unread":
             { POST(req);
-                if (InvalidMailboxOrMessageOrFolder(req, out var mailbox, out _, out var messageId, out _, out var folderName))
-                    break;
+                var (mailbox, messageId, _, folderName, _) = await ValidateMailboxAndMessageAndFolderAsync(req);
                 if (folderName == "Sent")
-                    throw new BadRequestSignal();
+                    return StatusResponse.BadRequest;
                 
                 await using (Mailboxes.StartModifying(ref mailbox))
                     if (mailbox.Messages.TryGetValue(messageId, out var message))
                         message.Unread = true;
-            } break;
+                return StatusResponse.Success;
+            }
 
             case "/reply":
             { POST(req);
-                if (InvalidMailboxOrMessageOrFolder(req, out var mailbox, out _, out var messageId, out _, out var folderName))
-                    break;
+                var (mailbox, messageId, _, folderName, _) = await ValidateMailboxAndMessageAndFolderAsync(req);
                 if (folderName == "Sent")
-                    throw new BadRequestSignal();
+                    return StatusResponse.BadRequest;
                 
                 await using var t = Mailboxes.StartModifying(ref mailbox);
                 
@@ -370,23 +369,19 @@ public partial class MailPlugin
                 string toAddress = (message.ReplyTo ?? message.From).Address;
                 mailbox.Messages[0] = new(new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address), [new MailAddress(toAddress, mailbox.Contacts.TryGetValue(toAddress, out var contact) ? contact.Name : toAddress)], "Re: " + subject, message.MessageId);
                 t.FileActions.Add(new SetFileAction("0/text", path => File.WriteAllText(path, text)));
-            } break;
+                return StatusResponse.Success;
+            }
 
             case "/find":
             { POST(req);
-                if (InvalidMailbox(req, out var mailbox))
-                    break;
-                if (!req.Query.TryGetValue("id", out var id))
-                    throw new BadRequestSignal();
+                var mailbox = await ValidateMailboxAsync(req);
+                var id = req.Query.GetOrThrow("id");
                 var messageIds = mailbox.Messages.Where(x => x.Value.MessageId.Split('\n').Contains(id)).Select(x => x.Key).ToList();
                 if (messageIds.Count == 0)
-                {
-                    await req.Write("no");
-                    break;
-                }
+                    return new TextResponse("no");
                 ulong messageId = messageIds.Max();
-                await req.Write($"mailbox={mailbox.Id}&folder={HttpUtility.UrlEncode(mailbox.Folders.First(x => x.Value.Contains(messageId)).Key)}&message={messageId}");
-            } break;
+                return new TextResponse($"mailbox={mailbox.Id}&folder={HttpUtility.UrlEncode(mailbox.Folders.First(x => x.Value.Contains(messageId)).Key)}&message={messageId}");
+            }
 
 
 
@@ -394,21 +389,22 @@ public partial class MailPlugin
             // INCOMING MESSAGE EVENT
             case "/incoming-event":
             { GET(req);
-                await req.KeepEventAliveCancelled.RegisterAsync(RemoveIncomingListener);
+                var response = new EventResponse();
+                await response.KeepEventAliveCancelled.RegisterAsync(RemoveIncomingListener);
                 var mailboxes = await ListAccessibleMailboxesAsync(req);
                 ulong actualLast, lastUnread;
                 ulong lastKnown = req.Query.TryGetValue("last", out ulong lk) ? lk : 0;
-                if (InvalidMailbox(req, out var mailbox))
+                var mailbox = await TryGetMailboxAsync(req);
+                if (mailbox == null)
                 {
-                    req.Status = 200;
                     actualLast = mailboxes.Max(LastInboxMessageId);
                     lastUnread = lastKnown == 0 ? 0 : mailboxes.Max(x => LastUnreadInboxMessageId(x, lastKnown));
                     //refresh on all mailboxes
                     foreach (var m in mailboxes)
                     {
                         if (IncomingListeners.TryGetValue(m.Id, out var kv))
-                            kv[req] = true;
-                        else IncomingListeners[m.Id] = new() { { req, true } };
+                            kv[response] = true;
+                        else IncomingListeners[m.Id] = new() { { response, true } };
                     }
                 }
                 else if ((!req.Query.TryGetValue("folder", out var folderName)) || folderName == "Inbox")
@@ -419,8 +415,8 @@ public partial class MailPlugin
                     foreach (var m in mailboxes)
                     {
                         if (IncomingListeners.TryGetValue(m.Id, out var kv))
-                            kv[req] = m == mailbox;
-                        else IncomingListeners[m.Id] = new() { { req, m == mailbox } };
+                            kv[response] = m == mailbox;
+                        else IncomingListeners[m.Id] = new() { { response, m == mailbox } };
                     }
                 }
                 else
@@ -431,33 +427,32 @@ public partial class MailPlugin
                     foreach (var m in mailboxes)
                     {
                         if (IncomingListeners.TryGetValue(m.Id, out var kv))
-                            kv[req] = false;
-                        else IncomingListeners[m.Id] = new() { { req, false } };
+                            kv[response] = false;
+                        else IncomingListeners[m.Id] = new() { { response, false } };
                     }
                 }
                 //check if the event should already be called
                 if (lastKnown != 0)
                 {
                     if (lastUnread > lastKnown)
-                        await req.EventMessage("icon");
+                        response.OnStart = () => response.EventMessage("icon");
                     if (actualLast > lastKnown)
+                        response.OnStart = async () =>
                     {
                         await Task.Delay(2000); //wait a few seconds so it doesn't violently refresh in case something is broken
-                        await req.EventMessage("refresh");
-                    }
+                        await response.EventMessage("refresh");
+                    };
                 }
                 //keep alive
-                await req.KeepEventAlive();
-            } break;
+                return response;
+            }
             
 
 
 
             // 404
             default:
-                req.CreatePage("Error");
-                req.Status = 404;
-                break;
+                return StatusResponse.NotFound;
         }
     }
 }

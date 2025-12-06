@@ -1,11 +1,12 @@
 ﻿using uwap.WebFramework.Accounts;
 using uwap.WebFramework.Elements;
+using uwap.WebFramework.Responses;
 
 namespace uwap.WebFramework.Plugins;
 
 public partial class MailPlugin
 {
-    public async Task HandleManage(Request req)
+    public async Task<IResponse> HandleManage(Request req)
     {
         switch (req.Path)
         {
@@ -21,7 +22,7 @@ public partial class MailPlugin
                     {
                         //mailbox doesn't exist
                         e.Add(new LargeContainerElement("Error", "This mailbox doesn't exist!", "red"));
-                        break;
+                        return new LegacyPageResponse(page, req);
                     }
                     //manage mailbox
                     page.Navigation.Add(new Button("Back", "manage", "right"));
@@ -66,38 +67,38 @@ public partial class MailPlugin
                     if (mailboxes.Count == 0)
                         e.Add(new ContainerElement("No mailboxes!", "", "red"));
                 }
-            } break;
+                return new LegacyPageResponse(page, req);
+            }
 
             case "/manage/create-mailbox":
             { POST(req);
                 req.ForceAdmin(false);
-                if (!req.Query.TryGetValue("address", out string? address))
-                    throw new BadRequestSignal();
+                var address = req.Query.GetOrThrow("address");
                 if (!AccountManager.CheckMailAddressFormat(address))
-                    await req.Write("format");
+                    return new TextResponse("format");
                 else if (await Mailboxes.AddressIndex.GetAsync(address) != null)
-                    await req.Write("exists");
+                    return new TextResponse("exists");
                 else
                 {
                     Mailbox mailbox = new(address);
                     await Mailboxes.CreateAsync(10, mailbox);
-                    await req.Write("mailbox=" + mailbox.Id);
+                    return new TextResponse("mailbox=" + mailbox.Id);
                 }
-            } break;
+            }
 
             case "/manage/delete-mailbox":
             { POST(req);
                 req.ForceAdmin(false);
-                if (!req.Query.TryGetValue("mailbox", out string? mailboxId))
-                    throw new BadRequestSignal();
+                var mailboxId = req.Query.GetOrThrow("mailbox");
                 await Mailboxes.DeleteAsync(mailboxId);
-            } break;
+                return StatusResponse.Success;
+            }
 
             case "/manage/add-access":
             { POST(req);
                 req.ForceAdmin(false);
-                if ((!req.Query.TryGetValue("mailbox", out var mailboxId)) || !req.Query.TryGetValue("username", out var usernameCombined))
-                    throw new BadRequestSignal();
+                var mailboxId = req.Query.GetOrThrow("mailbox");
+                var usernameCombined = req.Query.GetOrThrow("username");
                 UserTable? userTable = req.UserTable;
                 string username = usernameCombined;
                 int colon = usernameCombined.IndexOf(':');
@@ -108,33 +109,27 @@ public partial class MailPlugin
                     username = usernameCombined.Remove(0, colon + 1);
                 }
                 if (userTable == null)
-                {
-                    await req.Write("invalid");
-                    break;
-                }
+                    return new TextResponse("invalid");
                 User? user = await userTable.FindByUsernameAsync(username);
                 if (user == null)
-                {
-                    await req.Write("invalid");
-                    break;
-                }
+                    return new TextResponse("invalid");
                 
                 await Mailboxes.TransactionAsync(mailboxId, t =>
                 {
                     var set = t.Value.AllowedUserIds.GetValueOrAdd(userTable.Name, () => []);
                     set.Add(user.Id);
                 });
-                await req.Write("ok");
-            } break;
+                return new TextResponse("ok");
+            }
 
             case "/manage/remove-access":
             { POST(req);
                 req.ForceAdmin(false);
-                if (!req.Query.TryGetValue("mailbox", out var mailboxId) || !req.Query.TryGetValue("id", out var idCombined))
-                    throw new BadRequestSignal();
+                var mailboxId = req.Query.GetOrThrow("mailbox");
+                var idCombined = req.Query.GetOrThrow("id");
                 int colon = idCombined.IndexOf(':');
                 if (colon == -1)
-                    throw new BadRequestSignal();
+                    return StatusResponse.BadRequest;
                 string userTableName = idCombined.Remove(colon);
                 string userId = idCombined.Remove(0, colon + 1);
                 
@@ -142,16 +137,15 @@ public partial class MailPlugin
                 {
                     t.Value.AllowedUserIds.RemoveAndClean(userTableName, userId);
                 });
-            } break;
+                return StatusResponse.Success;
+            }
             
 
 
 
             // 404
             default:
-                req.CreatePage("Error");
-                req.Status = 404;
-                break;
+                return StatusResponse.NotFound;
         }
     }
 }

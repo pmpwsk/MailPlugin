@@ -4,20 +4,20 @@ using uwap.WebFramework.Database;
 using uwap.WebFramework.Accounts;
 using uwap.WebFramework.Elements;
 using uwap.WebFramework.Mail;
+using uwap.WebFramework.Responses;
 using uwap.WebFramework.Tools;
 
 namespace uwap.WebFramework.Plugins;
 
 public partial class MailPlugin
 {
-    public async Task HandleSend(Request req)
+    public async Task<IResponse> HandleSend(Request req)
     {
         switch (req.Path)
         {
             case "/send":
             { CreatePage(req, "Mail", out var page, out var e);
-                if (InvalidMailbox(req, out var mailbox))
-                    break;
+                var mailbox = await ValidateMailboxAsync(req);
                 string? to, subject, text;
                 if (mailbox.Messages.TryGetValue(0, out var message))
                 {
@@ -78,14 +78,14 @@ public partial class MailPlugin
                 e.Add(new LargeContainerElement(null, inputs));
                 int attachmentCount = message == null ? 0 : message.Attachments.Count;
                 e.Add(new ContainerElement(null, "More:") { Buttons = [new ButtonJS($"Attachments ({attachmentCount})", "GoToAttachments()"), ..message == null || message.InReplyToId == null ? (IEnumerable<IButton>)[new ButtonJS("Contacts", "GoToContacts()")] : []] });
-            } break;
+                return new LegacyPageResponse(page, req);
+            }
 
             case "/send/save-draft":
             { POST(req);
                 if (req.IsForm)
-                    throw new BadRequestSignal();
-                if (InvalidMailbox(req, out var mailbox))
-                    break;
+                    return StatusResponse.BadRequest;
+                var mailbox = await ValidateMailboxAsync(req);
                 
                 string text = await req.GetBodyText();
                 
@@ -96,14 +96,11 @@ public partial class MailPlugin
                 }
                 else
                 {
-                    if (!(req.Query.TryGetValue("to", out var toString) && req.Query.TryGetValue("subject", out var subject)))
-                        throw new BadRequestSignal();
+                    var toString = req.Query.GetOrThrow("to");
+                    var subject = req.Query.GetOrThrow("subject");
                     var to = toString.Split(',', ';', ' ').Where(x => x != "").ToList();
                     if (to.Any(x => !AccountManager.CheckMailAddressFormat(x)))
-                    {
-                        await req.Write("invalid-to");
-                        break;
-                    }
+                        return new TextResponse("invalid-to");
 
                     await using var t = Mailboxes.StartModifying(ref mailbox);
                     
@@ -121,15 +118,14 @@ public partial class MailPlugin
                     t.FileActions.Add(new SetFileAction("0/text", path => File.WriteAllText(path, text)));
                 }
 
-                await req.Write("ok");
-            } break;
+                return new TextResponse("ok");
+            }
             
             case "/send/delete-draft":
             { POST(req);
-                if (InvalidMailbox(req, out var mailbox))
-                    break;
+                var mailbox = await ValidateMailboxAsync(req);
                 if (!mailbox.Messages.ContainsKey(0))
-                    break;
+                    return StatusResponse.Success;
                 
                 await using var t = Mailboxes.StartModifying(ref mailbox);
                 
@@ -139,33 +135,21 @@ public partial class MailPlugin
                 int attachmentId = 0;
                 while (mailbox.DeleteFileIfExists($"0/{attachmentId}", t.FileActions))
                     attachmentId++;
-            } break;
+                return StatusResponse.Success;
+            }
                 
             case "/send/send-draft":
             { POST(req);
-                if (InvalidMailbox(req, out var mailbox))
-                    break;
+                var mailbox = await ValidateMailboxAsync(req);
                 if (!mailbox.Messages.TryGetValue(0, out var readMessage))
-                {
-                    await req.Write("no-draft");
-                    break;
-                }
+                    return new TextResponse("no-draft");
                 if (readMessage.Subject == "")
-                {
-                    await req.Write("invalid-subject");
-                    break;
-                }
+                    return new TextResponse("invalid-subject");
                 if (readMessage.To.Count == 0)
-                {
-                    await req.Write("invalid-to");
-                    break;
-                }
+                    return new TextResponse("invalid-to");
                 string text = mailbox.GetFileText("0/text")?.Trim() ?? "";
                 if (text == "")
-                {
-                    await req.Write("invalid-text");
-                    break;
-                }
+                    return new TextResponse("invalid-text");
                 
                 var message = mailbox.Messages[0];
                 message.TimestampUtc = DateTime.UtcNow;
@@ -222,8 +206,8 @@ public partial class MailPlugin
                     mailbox.Messages[messageId] = message;
                     mailbox.Folders["Sent"].Add(messageId);
                 }
-                await req.Write("message=" + messageId);
-            } break;
+                return new TextResponse("message=" + messageId);
+            }
 
 
 
@@ -231,8 +215,7 @@ public partial class MailPlugin
             // SEND > ATTACHMENTS
             case "/send/attachments":
             { CreatePage(req, "Mail", out var page, out var e);
-                if (InvalidMailbox(req, out var mailbox))
-                    break;
+                var mailbox = await ValidateMailboxAsync(req);
                 page.Navigation.Add(new Button("Back", $"../send?mailbox={mailbox.Id}", "right"));
                 page.Title = "Send an email";
                 page.Scripts.Add(Presets.SendRequestScript);
@@ -257,21 +240,20 @@ public partial class MailPlugin
                         counter++;
                     }
                 }
-            } break;
+                return new LegacyPageResponse(page, req);
+            }
 
             case "/send/attachments/upload":
             { POST(req);
                 if (!req.IsForm || req.Files.Count != 1)
-                    throw new BadRequestSignal();
-                if (InvalidMailbox(req, out var mailbox))
-                    break;
+                    return StatusResponse.BadRequest;
+                var mailbox = await ValidateMailboxAsync(req);
                 var file = req.Files[0];
                 var temp = Path.GetTempFileName();
                 if (!file.Download(temp, 10485760))
                 {
-                    req.Status = 413;
                     File.Delete(temp);
-                    break;
+                    return StatusResponse.PayloadTooLarge;
                 }
 
                 try
@@ -298,21 +280,21 @@ public partial class MailPlugin
                     if (File.Exists(temp))
                         File.Delete(temp);
                 }
-            } break;
+                return StatusResponse.Success;
+            }
 
             case "/send/attachments/delete":
             { POST(req);
-                if (InvalidMailbox(req, out var mailbox))
-                    break;
+                var mailbox = await ValidateMailboxAsync(req);
                 if (!(req.Query.TryGetValue("attachment", out var attachmentId) && int.TryParse(attachmentId, out var a) && a >= 0))
-                    throw new BadRequestSignal();
+                    return StatusResponse.BadRequest;
                 if (!(mailbox.Messages.TryGetValue(0, out var readMessage) && a < readMessage.Attachments.Count))
-                    throw new NotFoundSignal();
+                    return StatusResponse.NotFound;
                 
                 await using var t = Mailboxes.StartModifying(ref mailbox);
                 
                 if (!mailbox.Messages.TryGetValue(0, out var message))
-                    return;
+                    return StatusResponse.Success;
                 
                 message.Attachments.RemoveAt(a);
                 if (a == message.Attachments.Count)
@@ -328,7 +310,8 @@ public partial class MailPlugin
                         a++;
                     }
                 }
-            } break;
+                return StatusResponse.Success;
+            }
 
 
 
@@ -336,8 +319,7 @@ public partial class MailPlugin
             // SEND > CONTACTS
             case "/send/contacts":
             { CreatePage(req, "Mail", out var page, out var e);
-                if (InvalidMailbox(req, out var mailbox))
-                    break;
+                var mailbox = await ValidateMailboxAsync(req);
                 string? query = req.Query.TryGet("search");
                 page.Navigation.Add(new Button("Back", $"../send{(query == null ? "" : "/contacts")}?mailbox={mailbox.Id}", "right"));
                 page.Title = "Send an email";
@@ -351,7 +333,7 @@ public partial class MailPlugin
                 if (!mailbox.Messages.ContainsKey(0))
                 {
                     e.Add(new LargeContainerElement("No draft found!", "", "red"));
-                    break;
+                    return new LegacyPageResponse(page, req);
                 }
                 e.Add(new LargeContainerElement("Send an email", $"From: {mailbox.Address}{(mailbox.Name == null ? "" : $" ({mailbox.Name})")}", id: "e1"));
                 e.Add(new ContainerElement(null, new TextBox("Search...", query, "search", onEnter: $"Search()", autofocus: true)));
@@ -369,23 +351,23 @@ public partial class MailPlugin
                     foreach (var contactKV in search.Sort(x => !x.Value.Favorite, x => x.Value.Name))
                         e.Add(new ButtonElementJS($"{(contactKV.Value.Favorite ? "[*] " : "")}{contactKV.Value.Name}", contactKV.Key, $"AddContact('{HttpUtility.UrlEncode(contactKV.Key)}')"));
                 }
-            } break;
+                return new LegacyPageResponse(page, req);
+            }
 
             case "/send/contacts/add":
             { POST(req);
-                if (InvalidMailbox(req, out var mailbox))
-                    break;
-                if (!req.Query.TryGetValue("email", out string? email))
-                    throw new BadRequestSignal();
+                var mailbox = await ValidateMailboxAsync(req);
+                var email = req.Query.GetOrThrow("email");
                 if (!mailbox.Messages.TryGetValue(0, out var message))
-                    throw new NotFoundSignal();
+                    return StatusResponse.NotFound;
                 if (message.InReplyToId != null)
-                    throw new ForbiddenSignal();
+                    return StatusResponse.Forbidden;
                 if (message.To.All(x => x.Address != email))
                     await using (Mailboxes.StartModifying(ref mailbox))
                         if (mailbox.Messages.TryGetValue(0, out message))
                             message.To.Add(new(email, mailbox.Contacts.TryGetValue(email, out var contact) ? contact.Name : email));
-            } break;
+                return StatusResponse.Success;
+            }
 
 
 
@@ -393,8 +375,7 @@ public partial class MailPlugin
             // SEND > PREVIEW
             case "/send/preview":
             { CreatePage(req, "Mail", out var page, out var e);
-                if (InvalidMailbox(req, out var mailbox))
-                    break;
+                var mailbox = await ValidateMailboxAsync(req);
                 page.Navigation.Add(new Button("Back", $"../send?mailbox={mailbox.Id}", "right"));
                 page.Title = "Preview draft";
                 page.Scripts.Add(Presets.SendRequestScript);
@@ -407,7 +388,7 @@ public partial class MailPlugin
                 if (!mailbox.Messages.TryGetValue(0, out var message))
                 {
                     e.Add(new LargeContainerElement("No draft found!", "", "red"));
-                    break;
+                    return new LegacyPageResponse(page, req);
                 }
                 List<IContent> headingContents = [];
                 if (message.InReplyToId != null)
@@ -450,16 +431,15 @@ public partial class MailPlugin
                         attachmentId++;
                     }
                 }
-            } break;
+                return new LegacyPageResponse(page, req);
+            }
             
 
 
 
             // 404
             default:
-                req.CreatePage("Error");
-                req.Status = 404;
-                break;
+                return StatusResponse.NotFound;
         }
     }
 }

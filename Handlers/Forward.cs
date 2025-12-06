@@ -3,20 +3,20 @@ using uwap.WebFramework.Database;
 using uwap.WebFramework.Accounts;
 using uwap.WebFramework.Elements;
 using uwap.WebFramework.Mail;
+using uwap.WebFramework.Responses;
 
 namespace uwap.WebFramework.Plugins;
 
 public partial class MailPlugin
 {
-    public async Task HandleForward(Request req)
+    public async Task<IResponse> HandleForward(Request req)
     {
         switch (req.Path)
         {
             // FORWARD MAIL
             case "/forward":
             { CreatePage(req, "Forward", out var page, out var e);
-                if (InvalidMailboxOrMessageOrFolder(req, out var mailbox, out var message, out var messageId, out _, out var folderName))
-                    break;
+                var (mailbox, messageId, message, folderName, _) = await ValidateMailboxAndMessageAndFolderAsync(req);
                 page.Navigation.Add(new Button("Back", $".?mailbox={mailbox.Id}&folder={folderName}&message={messageId}", "right"));
                 page.Scripts.Add(Presets.SendRequestScript);
                 page.Scripts.Add(new Script("query.js"));
@@ -34,17 +34,15 @@ public partial class MailPlugin
                     new Checkbox("Add information about the original message", "info", true),
                     new TextBox("Recipient(s)...", null, "to", TextBoxRole.Email, "Original()", autofocus: true)
                 ]) { Button = new ButtonJS("Send", "Original()", "green", id: "send")});
-            } break;
+                return new LegacyPageResponse(page, req);
+            }
 
             case "/forward/quote":
             { POST(req);
-                if (InvalidMailboxOrMessageOrFolder(req, out var mailbox, out var message, out var messageId, out _, out _))
-                    break;
-                if (!(req.Query.TryGetValue("everything", out string? everythingS) && bool.TryParse(everythingS, out bool everything)))
-                    throw new BadRequestSignal();
+                var (mailbox, messageId, message, _, _) = await ValidateMailboxAndMessageAndFolderAsync(req);
+                var everything = req.Query.GetOrThrow<bool>("everything");
                 
-                await using (var t = Mailboxes.StartModifying(ref mailbox))
-                {
+                await using var t = Mailboxes.StartModifying(ref mailbox);
                 
                 string? text = mailbox.GetFileText($"{messageId}/html") ?? mailbox.GetFileText($"{messageId}/text")?.Map(text => AddHTML(text.HtmlSafe()));
                 text = text != null ? $"\n\n\n# Forwarded message:\n# From: {message.From.FullString}\n# Time: {DateTimeString(message.TimestampUtc)} UTC\n\n\n{QuoteHTML(everything ? text : Before(text, "# Original message:").TrimEnd())}" : "";
@@ -57,21 +55,17 @@ public partial class MailPlugin
                     subject = realSubject.TrimStart();
                 mailbox.Messages[0] = new(new MailAddress(mailbox.Address, mailbox.Name ?? mailbox.Address), [], "Fwd: " + subject, null);
                 t.FileActions.Add(new SetFileAction("0/text", path => File.WriteAllText(path, text)));
-                }
-            } break;
+                return StatusResponse.Success;
+            }
 
             case "/forward/original":
             { POST(req);
-                if (InvalidMailboxOrMessageOrFolder(req, out var mailbox, out var originalMessage, out var originalMessageId, out _, out _))
-                    break;
-                if (!(req.Query.TryGetValue("info", out string? infoS) && bool.TryParse(infoS, out bool info) && req.Query.TryGetValue("to", out var toString)))
-                    throw new BadRequestSignal();
+                var (mailbox, originalMessageId, originalMessage, _, _) = await ValidateMailboxAndMessageAndFolderAsync(req);
+                var info = req.Query.GetOrThrow<bool>("info");
+                var toString = req.Query.GetOrThrow("to");
                 var to = toString.Split(',', ';', ' ').Where(x => x != "").ToList();
                 if (to.Any(x => !AccountManager.CheckMailAddressFormat(x)))
-                {
-                    await req.Write("invalid-to");
-                    break;
-                }
+                    return new TextResponse("invalid-to");
                 
                 string subject = originalMessage.Subject.Trim();
                 while (subject.SplitAtFirst(':', out var subjectPrefix, out var realSubject) && subjectPrefix.All(char.IsLetter) && (subjectPrefix.Length == 2 || subjectPrefix.Length == 3) && realSubject.TrimStart() != "")
@@ -134,17 +128,15 @@ public partial class MailPlugin
                     if (textPart != null)
                         t.FileActions.Add(new SetFileAction($"{messageId}/text", targetPath => File.WriteAllText(targetPath, textPart)));
                 }
-                await req.Write("message=" + messageId);
-            } break;
+                return new TextResponse("message=" + messageId);
+            }
             
 
 
 
             // 404
             default:
-                req.CreatePage("Error");
-                req.Status = 404;
-                break;
+                return StatusResponse.NotFound;
         }
     }
 }
