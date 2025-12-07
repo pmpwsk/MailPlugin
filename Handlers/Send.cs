@@ -83,11 +83,11 @@ public partial class MailPlugin
 
             case "/send/save-draft":
             { POST(req);
-                if (req.IsForm)
+                if (req.Body == null)
                     return StatusResponse.BadRequest;
                 var mailbox = await ValidateMailboxAsync(req);
                 
-                string text = await req.GetBodyText();
+                string text = await req.Body.GetText();
                 
                 if (mailbox.Messages.TryGetValue(0, out var readMessage) && readMessage.InReplyToId != null)
                 {
@@ -245,10 +245,10 @@ public partial class MailPlugin
 
             case "/send/attachments/upload":
             { POST(req);
-                if (!req.IsForm || req.Files.Count != 1)
+                if (req.Form == null || req.Form.Files.Count != 1)
                     return StatusResponse.BadRequest;
                 var mailbox = await ValidateMailboxAsync(req);
-                var file = req.Files[0];
+                var file = req.Form.Files[0];
                 var temp = Path.GetTempFileName();
                 if (!file.Download(temp, 10485760))
                 {

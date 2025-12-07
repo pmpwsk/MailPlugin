@@ -75,7 +75,7 @@ public partial class MailPlugin
         }
         catch
         {
-            req.Cookies.Delete("TimeOffset");
+            req.CookieWriter?.Delete("TimeOffset");
             return dateTime;
         }
     }

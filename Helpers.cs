@@ -51,7 +51,7 @@ public partial class MailPlugin
 
     private static CustomScript IncomingScript(Request req, ulong last)
     {
-        string query = req.QueryString;
+        string query = req.Query.FullString;
         if (query == "")
             query = "?";
         else query += "&";
