@@ -1,6 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using uwap.WebFramework.Database;
-using uwap.WebFramework.Elements;
+﻿using uwap.WebFramework.Database;
 using uwap.WebFramework.Responses;
 
 namespace uwap.WebFramework.Plugins;
