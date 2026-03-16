@@ -300,7 +300,7 @@ public partial class MailPlugin
 
             case "/attachment":
             { GET(req);
-                var (mailbox, messageId, message) = await ValidateMailboxAndMessageAsync(req);
+                var (mailbox, messageId, message) = await ValidateMailboxAndMessageAsync(req, true);
                 var attachmentId = req.Query.GetOrThrow<int>("attachment");
                 var download = req.Query.GetOrThrow<bool>("download");
                 if (attachmentId < 0 || attachmentId >= message.Attachments.Count)
