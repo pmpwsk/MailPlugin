@@ -41,7 +41,7 @@ public partial class MailPlugin
                     if (mailbox.AllowedUserIds.Any(x => x.Value.Count != 0))
                         foreach (var userTableKV in mailbox.AllowedUserIds)
                         {
-                            UserTable userTable = UserTable.Import(userTableKV.Key);
+                            UserTable userTable = UserTable.Import(userTableKV.Key, []); //cluster nodes are ignored if the table is already loaded
                             foreach (var userId in userTableKV.Value)
                             {
                                 var u = await userTable.GetByIdNullableAsync(userId);

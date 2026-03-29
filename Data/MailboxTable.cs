@@ -4,7 +4,7 @@ namespace uwap.WebFramework.Plugins;
 
 public partial class MailPlugin
 {
-    public class MailboxTable(string name) : Table<Mailbox>(name)
+    public class MailboxTable(string name, List<ClusterNode> clusterNodes) : Table<Mailbox>(name, clusterNodes)
     {
         public UniqueTableIndex<Mailbox, string> AddressIndex = new(mailbox => mailbox.Address);
         
@@ -19,8 +19,8 @@ public partial class MailPlugin
 
         protected override IEnumerable<ITableIndex<Mailbox>> Indices => [ AddressIndex, AllowedMailboxesIndex ];
         
-        public static MailboxTable Import(string name)
-            => Tables.Dictionary.TryGetValue(name, out AbstractTable? existingTable) ? (MailboxTable)existingTable : new MailboxTable(name);
+        public new static MailboxTable Import(string name, List<ClusterNode> clusterNodes)
+            => Tables.Dictionary.TryGetValue(name, out AbstractTable? existingTable) ? (MailboxTable)existingTable : new MailboxTable(name, clusterNodes);
 
         public override ulong TypeIteration
             => 1;
