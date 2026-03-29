@@ -1,4 +1,5 @@
 ﻿using uwap.WebFramework.Accounts;
+using uwap.WebFramework.Database;
 using uwap.WebFramework.Elements;
 using uwap.WebFramework.Responses;
 
@@ -41,13 +42,13 @@ public partial class MailPlugin
                     if (mailbox.AllowedUserIds.Any(x => x.Value.Count != 0))
                         foreach (var userTableKV in mailbox.AllowedUserIds)
                         {
-                            UserTable userTable = UserTable.Import(userTableKV.Key, []); //cluster nodes are ignored if the table is already loaded
-                            foreach (var userId in userTableKV.Value)
-                            {
-                                var u = await userTable.GetByIdNullableAsync(userId);
-                                if (u != null)
-                                    e.Add(new ContainerElement(u.Username, u.Id) { Button = new ButtonJS("Remove", $"Remove('{userTable.Name}:{userId}')", "red") });
-                            }
+                            if (Tables.TryGetTable<UserTable>(userTableKV.Key, out var userTable))
+                                foreach (var userId in userTableKV.Value)
+                                {
+                                    var u = await userTable.GetByIdNullableAsync(userId);
+                                    if (u != null)
+                                        e.Add(new ContainerElement(u.Username, u.Id) { Button = new ButtonJS("Remove", $"Remove('{userTable.Name}:{userId}')", "red") });
+                                }
                         }
                     else e.Add(new ContainerElement("No allowed accounts!", "", "red"));
                 }

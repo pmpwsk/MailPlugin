@@ -20,7 +20,7 @@ public partial class MailPlugin
         protected override IEnumerable<ITableIndex<Mailbox>> Indices => [ AddressIndex, AllowedMailboxesIndex ];
         
         public new static MailboxTable Import(string name, List<ClusterNode> clusterNodes)
-            => Tables.Dictionary.TryGetValue(name, out AbstractTable? existingTable) ? (MailboxTable)existingTable : new MailboxTable(name, clusterNodes);
+            => Tables.TryGetTable<MailboxTable>(name) ?? new MailboxTable(name, clusterNodes);
 
         public override ulong TypeIteration
             => 1;
