@@ -46,20 +46,5 @@ public partial class MailPlugin
 
         [DataMember]
         public bool ShowExternalImageLinks = false;
-        
-        protected override void Migrate(AbstractTable table, string id, byte[] serialized)
-        {
-            if (AssemblyVersion == new Version(0, 0, 0, 0))
-            {
-                var dir = new DirectoryInfo($"../MailPlugin.Mailboxes/{id}");
-                if (dir.Exists)
-                {
-                    foreach (var messageDir in dir.GetDirectories("*", SearchOption.TopDirectoryOnly))
-                        foreach (var file in messageDir.GetFiles("*", SearchOption.TopDirectoryOnly))
-                            MigrateLegacyFile(table, id, $"{messageDir.Name}/{file.Name}", file.FullName);
-                    dir.Delete(true);
-                }
-            }
-        }
     }
 }
