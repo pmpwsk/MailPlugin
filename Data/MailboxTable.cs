@@ -36,24 +36,22 @@ public partial class MailPlugin
                 {
                     byte[] serialized;
                     var minimal = Serializers.DataContractJson.Deserialize<MinimalTableValue>(current.Serialized);
-                    if (minimal.Deleted)
+                    if (minimal.State.Deleted)
                         serialized = current.Serialized;
                     else
                     {
                         var mailbox = Serializers.DataContractJson.Deserialize<Mailbox>(current.Serialized);
-                        var dirty = mailbox.EnsureMinimalTableValue();
                         
                         var dir = new DirectoryInfo($"../MailPlugin.Mailboxes/{id}");
                         if (dir.Exists)
                         {
-                            dirty = true;
                             foreach (var messageDir in dir.GetDirectories("*", SearchOption.TopDirectoryOnly))
                                 foreach (var file in messageDir.GetFiles("*", SearchOption.TopDirectoryOnly))
                                     mailbox.MigrateLegacyFile(this, id, $"{messageDir.Name}/{file.Name}", file.FullName);
                             dir.Delete(true);
                         }
                         
-                        serialized = dirty ? Serializers.DataContractJson.Serialize(mailbox) : current.Serialized;
+                        serialized = Serializers.DataContractJson.Serialize(mailbox);
                     }
                     return (serialized, 1);
                 }
