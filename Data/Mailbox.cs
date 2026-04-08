@@ -6,7 +6,7 @@ namespace uwap.WebFramework.Plugins;
 public partial class MailPlugin
 {
     [DataContract]
-    public class Mailbox(string address) : AbstractTableValue
+    public class Mailbox(string address) : AbstractTableValue(EntryState.CreateEmpty())
     {
         [DataMember]
         public readonly string Address = address;
