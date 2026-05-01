@@ -91,7 +91,7 @@ public partial class MailPlugin
             { POST(req);
                 req.ForceAdmin(false);
                 var mailboxId = req.Query.GetOrThrow("mailbox");
-                await Mailboxes.DeleteAsync(mailboxId);
+                await Mailboxes.DeleteByIdAsync(mailboxId);
                 return StatusResponse.Success;
             }
 
