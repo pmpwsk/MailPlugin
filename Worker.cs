@@ -2,7 +2,7 @@
 
 public partial class MailPlugin
 {
-    public override async Task Work()
+    public override async Task WorkAsync()
     {
         foreach (var listedMailbox in await Mailboxes.ListAllAsync())
         {
