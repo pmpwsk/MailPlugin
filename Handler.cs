@@ -4,7 +4,7 @@ namespace uwap.WebFramework.Plugins;
 
 public partial class MailPlugin : Plugin
 {
-    public override Task<IResponse> HandleAsync(Request req)
+    public override Task<IResponse> HandleOtherAsync(Request req)
         => Parsers.GetFirstSegment(req.Path, out _) switch
         {
             "forward" => HandleForward(req),
