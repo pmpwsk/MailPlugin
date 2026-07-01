@@ -61,7 +61,7 @@ public partial class MailPlugin
             Cc = message.Cc.Mailboxes.Select(x => new MailAddress(x)).ToList();
             Bcc = message.Bcc.Mailboxes.Select(x => new MailAddress(x)).ToList();
             ReplyTo = message.ReplyTo.Mailboxes.Any() ? new(message.ReplyTo.Mailboxes.First()) : null;
-            MessageId = message.MessageId;
+            MessageId = message.MessageId ?? "unknown";
             InReplyToId = message.InReplyTo;
             string? subject = message.Subject?.Trim();
             Subject = string.IsNullOrEmpty(subject) ? "[no subject]" : subject;

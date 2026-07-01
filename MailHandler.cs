@@ -80,7 +80,7 @@ public partial class MailPlugin
             FullResult authResult = CheckEverything(connectionData, message, log);
             List<MailAttachment> attachments = message.Attachments.Select(x =>
             {
-                string? fileName = x.ContentDisposition.FileName?.Trim().HtmlSafe();
+                string? fileName = x.ContentDisposition?.FileName?.Trim().HtmlSafe();
                 if (fileName == "")
                     fileName = null;
                 string? mimeType = x.ContentType.MimeType?.Trim().HtmlSafe();
@@ -119,10 +119,10 @@ public partial class MailPlugin
                             switch (attachment)
                             {
                                 case MessagePart messagePart:
-                                    messagePart.Message.WriteTo(stream);
+                                    messagePart.Message?.WriteTo(stream);
                                     break;
                                 case MimePart mimePart:
-                                    mimePart.Content.DecodeTo(stream);
+                                    mimePart.Content?.DecodeTo(stream);
                                     break;
                                 default:
                                     Console.WriteLine($"UNRECOGNIZED MAIL ATTACHMENT TYPE {attachment.GetType().FullName}");
@@ -176,7 +176,7 @@ public partial class MailPlugin
             {
                 Console.WriteLine("ATTACHMENTS:");
                 foreach (var attachment in message.Attachments)
-                    Console.WriteLine($"\t{attachment.ContentDisposition.FileName} - {attachment.ContentType.MimeType}");
+                    Console.WriteLine($"\t{attachment.ContentDisposition?.FileName} - {attachment.ContentType.MimeType}");
             }
             Console.WriteLine();
         }
