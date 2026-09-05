@@ -376,7 +376,7 @@ public partial class MailPlugin
             { POST(req);
                 var mailbox = await ValidateMailboxAsync(req);
                 var id = req.Query.GetOrThrow("id");
-                var messageIds = mailbox.Messages.Where(x => x.Value.MessageId.Split('\n').Contains(id)).Select(x => x.Key).ToList();
+                var messageIds = mailbox.Messages.Where(x => x.Value.MessageId != null && x.Value.MessageId.Split('\n').Contains(id)).Select(x => x.Key).ToList();
                 if (messageIds.Count == 0)
                     return new TextResponse("no");
                 ulong messageId = messageIds.Max();
