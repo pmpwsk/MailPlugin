@@ -32,8 +32,9 @@ async function Save() {
     save.className = "green";
     try {
         var url = `send/save-draft?mailbox=${GetQuery("mailbox")}`;
-        if (subject != null)
-            url = url + "&to=" + encodeURIComponent(to.value) + "&subject=" + encodeURIComponent(subject.value)
+        if (to != null)
+            url = url + "&to=" + encodeURIComponent(to.value)
+        url = url + "&subject=" + encodeURIComponent(subject.value)
         var response = await fetch(url, { method: "POST", body: ta.value });
         if (response.status === 200) {
             var text = await response.text();

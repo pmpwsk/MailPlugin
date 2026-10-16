@@ -46,7 +46,7 @@ public partial class MailPlugin
             "/message.js" => "638577169364211666",
             "/move.js" => "638576777214654648",
             "/query.js" => "638577170272719722",
-            "/send.js" => "638968457112370718",
+            "/send.js" => "639277633221200000",
             "/send/attachments.js" => "638576316249240646",
             "/send/contacts.js" => "638576316321107836",
             "/send/preview.js" => "638861964208869642",

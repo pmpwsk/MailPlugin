@@ -56,10 +56,7 @@ public partial class MailPlugin
                     new Paragraph($"From: {mailbox.Address}{(mailbox.Name == null ? "" : $" ({mailbox.Name})")}")
                 ];
                 if (message is { InReplyToId: not null })
-                {
                     headingContent.Add(new Paragraph($"To: {to}"));
-                    headingContent.Add(new Paragraph($"Subject: {subject}"));
-                } 
                 e.Add(new LargeContainerElement((message == null || message.InReplyToId == null) ? "Send an email" : "Reply", headingContent) { Button = new ButtonJS("Send", "Send()", "green", id: "send") });
                 e.Add(Presets.ErrorElement);
                 e.Add(new ContainerElement(null, "Draft:") { Buttons =
@@ -70,10 +67,8 @@ public partial class MailPlugin
                 ]});
                 List<IContent> inputs = [];
                 if (message == null || message.InReplyToId == null)
-                {
                     inputs.Add(new TextBox("Recipient(s)...", to, "to", TextBoxRole.Email, onInput: "MessageChanged()"));
-                    inputs.Add(new TextBox("Subject...", subject, "subject", onInput: "MessageChanged()"));
-                }
+                inputs.Add(new TextBox("Subject...", subject, "subject", onInput: "MessageChanged()"));
                 inputs.Add(new TextArea("Message...", text, "text", classes: "grow", styles: "min-height: 10rem", autofocus: true, onInput: "MessageChanged()"));
                 e.Add(new LargeContainerElement(null, inputs));
                 int attachmentCount = message == null ? 0 : message.Attachments.Count;
@@ -91,8 +86,13 @@ public partial class MailPlugin
                 
                 if (mailbox.Messages.TryGetValue(0, out var readMessage) && readMessage.InReplyToId != null)
                 {
+                    var subject = req.Query.GetOrThrow("subject");
                     await using var t = Mailboxes.StartModifying(ref mailbox);
-                    t.FileActions.Add(new SetFileAction("0/text", path => File.WriteAllText(path, text)));
+                    if (mailbox.Messages.TryGetValue(0, out var message))
+                    {
+                        message.Subject = subject.Trim();
+                        t.FileActions.Add(new SetFileAction("0/text", path => File.WriteAllText(path, text)));
+                    }
                 }
                 else
                 {
