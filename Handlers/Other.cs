@@ -137,7 +137,7 @@ public partial class MailPlugin
                         string offsetQuery = offset == 0 ? "" : $"&offset={offset}";
                         foreach (var mId in GetLastReversed(folder, MessagePreloadCount, offset))
                             if (mailbox.Messages.TryGetValue(mId, out var m))
-                                e.Add(new ButtonElement(m.Subject, (folderName == "Sent" ? "To: " + string.Join(", ", m.To.Select(x => x.ContactString(mailbox))) : m.From.ContactString(mailbox)).HtmlSafe() + "</p><p>" + DateTimeString(AdjustDateTime(req, m.TimestampUtc)), $".?mailbox={mailboxId}&folder={HttpUtility.UrlEncode(folderName)}&message={mId}{offsetQuery}", m.Unread ? "red" : null) {Unsafe = true});
+                                e.Add(new ButtonElement(m.Subject, (folderName == "Sent" ? "To: " + string.Join(", ", m.To.Select(x => x.ContactString(mailbox))) : m.From.ContactString(mailbox)).HtmlSafe() + "</p><p>" + DateTimeString(await AdjustDateTimeAsync(req, m.TimestampUtc)), $".?mailbox={mailboxId}&folder={HttpUtility.UrlEncode(folderName)}&message={mId}{offsetQuery}", m.Unread ? "red" : null) {Unsafe = true});
                         if (offset + MessagePreloadCount < folder.Count)
                             e.Add(new ButtonElement(null, "Older messages", $"{PathWithoutQueries(".", req, "offset")}&offset={offset + MessagePreloadCount}"));
                     }
@@ -228,7 +228,7 @@ public partial class MailPlugin
                     List<IContent> headingContents = [];
                     if (message.InReplyToId != null)
                         headingContents.Add(new Paragraph($"This is a reply to another email (<a href=\"javascript:\" id=\"find\" onclick=\"FindOriginal('{HttpUtility.UrlEncode(message.InReplyToId).HtmlValueSafe()}')\">find</a>).") {Unsafe = true});
-                    headingContents.Add(new Paragraph(DateTimeString(AdjustDateTime(req, message.TimestampUtc))));
+                    headingContents.Add(new Paragraph(DateTimeString(await AdjustDateTimeAsync(req, message.TimestampUtc))));
                     headingContents.Add(new Paragraph("From: " + message.From.ContactString(mailbox)));
                     foreach (var to in message.To)
                         headingContents.Add(new Paragraph("To: " + to.ContactString(mailbox)));

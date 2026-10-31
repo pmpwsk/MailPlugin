@@ -62,7 +62,7 @@ public partial class MailPlugin
         return $"{Math.Round(size / Math.Pow(1000, factor), 1, MidpointRounding.AwayFromZero)} {FileSizeUnits[factor]}";
     }
 
-    private static DateTime AdjustDateTime(Request req, DateTime dateTime)
+    private static async Task<DateTime> AdjustDateTimeAsync(Request req, DateTime dateTime)
     {
         try
         {
@@ -73,7 +73,8 @@ public partial class MailPlugin
         }
         catch
         {
-            req.CookieWriter?.Delete("TimeOffset");
+            if (req.Cookies.CanWrite)
+                await req.Cookies.DeleteAsync("TimeOffset");
             return dateTime;
         }
     }
