@@ -7,7 +7,7 @@ public partial class MailPlugin
 {
     public MailPlugin(List<ClusterNode> clusterNodes, bool assignEvents = true)
     {
-        Mailboxes = MailboxTable.Import("MailPlugin.Mailboxes", clusterNodes);
+        Mailboxes = new("MailPlugin.Mailboxes", clusterNodes);
         if (assignEvents)
         {
             AssignEvents().GetAwaiter().GetResult();
